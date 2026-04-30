@@ -54,8 +54,6 @@ export default function DashboardPage() {
   useEffect(() => {
     if (selectedMatchIds.length === 0) {
       setAllEvents([]);
-      setHighlightEvents([]);
-      setTeamSheets([]);
       return;
     }
     (async () => {
