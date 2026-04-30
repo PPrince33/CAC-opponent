@@ -9,19 +9,23 @@ export default function HighlightTaggerPitch({
   onEventComplete,
   onEventClick,
 }) {
-  const containerRef = useRef(null);
-  
+  const svgRef = useRef(null);
+
   const [isDrawing, setIsDrawing] = useState(false);
   const [startPoint, setStartPoint] = useState(null);
   const [mousePoint, setMousePoint] = useState(null);
 
   const getCoords = (e) => {
-    const rect = containerRef.current.getBoundingClientRect();
-    const relX = (e.clientX - rect.left) / rect.width;
-    const relY = (e.clientY - rect.top) / rect.height;
+    const svg = svgRef.current;
+    if (!svg) return { x: 0, y: 0 };
+    // Use SVG's own coordinate transform — handles viewBox + preserveAspectRatio correctly
+    const pt = svg.createSVGPoint();
+    pt.x = e.clientX;
+    pt.y = e.clientY;
+    const svgP = pt.matrixTransform(svg.getScreenCTM().inverse());
     return {
-      x: Math.round(relX * 120 * 10) / 10,
-      y: Math.round(relY * 80 * 10) / 10,
+      x: Math.round(Math.max(0, Math.min(120, svgP.x)) * 10) / 10,
+      y: Math.round(Math.max(0, Math.min(80, svgP.y)) * 10) / 10,
     };
   };
 
@@ -73,20 +77,20 @@ export default function HighlightTaggerPitch({
       </div>
 
       <div
-        ref={containerRef}
         style={{ 
           cursor: "crosshair", position: "relative", background: "#2D5A27",
           aspectRatio: "3/2"
         }}
-        onClick={handleClick}
-        onMouseMove={handleMouseMove}
       >
         <svg
+          ref={svgRef}
           viewBox="-3 -1 126 82"
           width="100%"
           height="100%"
-          style={{ position: "absolute", inset: 0 }}
+          style={{ position: "absolute", inset: 0, cursor: "crosshair" }}
           preserveAspectRatio="xMidYMid meet"
+          onClick={handleClick}
+          onMouseMove={handleMouseMove}
         >
           {/* Pitch grass background (clipped to pitch area) */}
           <rect x="0" y="0" width="120" height="80" fill="#2D5A27" />
