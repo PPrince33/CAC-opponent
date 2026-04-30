@@ -1,0 +1,209 @@
+/* ─── GOOGLE FONTS ─── */
+@import url("https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700;800&display=swap");
+
+@import "tailwindcss";
+
+/* ─── TAILWIND v4 THEME ─── */
+@theme {
+  --color-bg: #F9FAFB;
+  --color-card: #FFFFFF;
+  --color-header: #000000;
+  --color-accent: #34D399;
+  --color-filter: #FACC15;
+  --color-badge-teal: #2DD4BF;
+  --color-badge-blue: #60A5FA;
+  --color-badge-orange: #FB923C;
+  --color-badge-red: #F87171;
+  --color-badge-purple: #A78BFA;
+  --color-pitch-green: #2D6A4F;
+  --color-pitch-line: #FFFFFF;
+  --color-pitch-light: #40916C;
+  --font-family-mono: "JetBrains Mono", "Courier New", monospace;
+}
+
+/* ─── GLOBAL RESET ─── */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  font-family: var(--font-family-mono);
+  background-color: var(--color-bg);
+  color: #000;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* ─── NEO-BRUTALIST UTILITIES ─── */
+.brutal-border {
+  border: 3px solid #000;
+}
+
+.brutal-shadow {
+  box-shadow: 4px 4px 0px 0px rgba(0, 0, 0, 1);
+}
+
+.brutal-shadow-sm {
+  box-shadow: 2px 2px 0px 0px rgba(0, 0, 0, 1);
+}
+
+.brutal-shadow-lg {
+  box-shadow: 6px 6px 0px 0px rgba(0, 0, 0, 1);
+}
+
+.brutal-card {
+  background: var(--color-card);
+  border: 3px solid #000;
+  box-shadow: 4px 4px 0px 0px rgba(0, 0, 0, 1);
+}
+
+.brutal-btn {
+  font-family: var(--font-family-mono);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  border: 3px solid #000;
+  box-shadow: 4px 4px 0px 0px rgba(0, 0, 0, 1);
+  cursor: pointer;
+  transition: all 0.1s ease;
+  padding: 8px 16px;
+}
+
+.brutal-btn:hover {
+  box-shadow: 2px 2px 0px 0px rgba(0, 0, 0, 1);
+  transform: translate(2px, 2px);
+}
+
+.brutal-btn:active {
+  box-shadow: 0px 0px 0px 0px rgba(0, 0, 0, 1);
+  transform: translate(4px, 4px);
+}
+
+.brutal-input {
+  font-family: var(--font-family-mono);
+  text-transform: uppercase;
+  border: 3px solid #000;
+  box-shadow: 2px 2px 0px 0px rgba(0, 0, 0, 1);
+  padding: 8px 12px;
+  background: #fff;
+  outline: none;
+  font-size: 0.85rem;
+}
+
+.brutal-input:focus {
+  box-shadow: 4px 4px 0px 0px rgba(0, 0, 0, 1);
+}
+
+.brutal-select {
+  font-family: var(--font-family-mono);
+  text-transform: uppercase;
+  border: 3px solid #000;
+  box-shadow: 2px 2px 0px 0px rgba(0, 0, 0, 1);
+  padding: 8px 12px;
+  background: #fff;
+  outline: none;
+  font-size: 0.85rem;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath d='M2 4l4 4 4-4' fill='none' stroke='%23000' stroke-width='2'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  padding-right: 36px;
+  cursor: pointer;
+}
+
+/* ─── BADGE UTILITIES ─── */
+.brutal-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  border: 2px solid #000;
+  box-shadow: 2px 2px 0px 0px rgba(0, 0, 0, 1);
+  text-transform: uppercase;
+}
+
+/* ─── PITCH STYLES ─── */
+.pitch-container {
+  aspect-ratio: 3 / 2;
+  background: var(--color-pitch-green);
+  border: 3px solid #000;
+  box-shadow: 4px 4px 0px 0px rgba(0, 0, 0, 1);
+  position: relative;
+  overflow: hidden;
+}
+
+/* ─── SCROLLBAR ─── */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--color-bg);
+  border: 2px solid #000;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #000;
+}
+
+/* ─── MODAL BACKDROP ─── */
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+  backdrop-filter: blur(2px);
+}
+
+/* ─── ANIMATIONS ─── */
+@keyframes pop-in {
+  0% { transform: scale(0.8); opacity: 0; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+@keyframes flash-green {
+  0% { background-color: var(--color-accent); }
+  100% { background-color: transparent; }
+}
+
+@keyframes slide-up {
+  0% { transform: translateY(20px); opacity: 0; }
+  100% { transform: translateY(0); opacity: 1; }
+}
+
+.animate-pop-in {
+  animation: pop-in 0.2s ease-out;
+}
+
+.animate-flash {
+  animation: flash-green 0.5s ease-out;
+}
+
+.animate-slide-up {
+  animation: slide-up 0.3s ease-out;
+}
+
+/* ─── HEATMAP CELL OPACITY UTILITIES ─── */
+.heat-0 { background: rgba(45, 212, 191, 0); }
+.heat-1 { background: rgba(45, 212, 191, 0.15); }
+.heat-2 { background: rgba(45, 212, 191, 0.3); }
+.heat-3 { background: rgba(96, 165, 250, 0.4); }
+.heat-4 { background: rgba(96, 165, 250, 0.55); }
+.heat-5 { background: rgba(251, 146, 60, 0.6); }
+.heat-6 { background: rgba(251, 146, 60, 0.75); }
+.heat-7 { background: rgba(248, 113, 113, 0.8); }
+.heat-8 { background: rgba(248, 113, 113, 0.9); }
+.heat-9 { background: rgba(220, 38, 38, 0.95); }
