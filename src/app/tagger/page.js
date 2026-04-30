@@ -287,14 +287,24 @@ export default function TaggerPage() {
                   <label style={{ fontSize: "0.6rem", fontWeight: 800 }}>PLAYER</label>
                   <select className="brutal-select w-full" style={{ fontSize: "0.65rem", padding: "4px" }} value={tagForm.action_player_id} onChange={e => setTagForm({...tagForm, action_player_id: e.target.value})}>
                     <option value="">— SELECT —</option>
-                    {teamSheet.map(p => (<option key={p.id} value={p.id}>{p.jersey_number} {p.player_name}</option>))}
+                    {teamSheet
+                      .filter(p => {
+                        const targetTeam = tagForm.team_type === "focus_team" ? selectedMatch?.home_team : selectedMatch?.away_team;
+                        return p.team_name === targetTeam;
+                      })
+                      .map(p => (<option key={p.id} value={p.id}>{p.jersey_number} {p.player_name}</option>))}
                   </select>
                 </div>
                 <div>
                   <label style={{ fontSize: "0.6rem", fontWeight: 800 }}>TO (REACTION)</label>
                   <select className="brutal-select w-full" style={{ fontSize: "0.65rem", padding: "4px" }} value={tagForm.reaction_player_id} onChange={e => setTagForm({...tagForm, reaction_player_id: e.target.value})}>
                     <option value="">— SELECT —</option>
-                    {teamSheet.map(p => (<option key={p.id} value={p.id}>{p.jersey_number} {p.player_name}</option>))}
+                    {teamSheet
+                      .filter(p => {
+                        const targetTeam = tagForm.team_type === "focus_team" ? selectedMatch?.home_team : selectedMatch?.away_team;
+                        return p.team_name === targetTeam;
+                      })
+                      .map(p => (<option key={p.id} value={p.id}>{p.jersey_number} {p.player_name}</option>))}
                   </select>
                 </div>
                 <div>
