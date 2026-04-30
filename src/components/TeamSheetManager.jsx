@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase";
 
-export default function TeamSheetManager({ matchId, onPlayerChange }) {
+export default function TeamSheetManager({ matchId, match, onPlayerChange }) {
   const [players, setPlayers] = useState([]);
   const [loading, setLoading] = useState(false);
   const [mode, setMode] = useState("single"); // "single" | "bulk"
@@ -97,7 +97,7 @@ export default function TeamSheetManager({ matchId, onPlayerChange }) {
 
       return {
         match_id: matchId,
-        team_name: team || "Unknown",
+        team_name: (team || form.team_name || "Unknown").toUpperCase(),
         player_name: name,
         jersey_number: jersey,
         position: pos
@@ -156,10 +156,17 @@ export default function TeamSheetManager({ matchId, onPlayerChange }) {
       {/* ADD PLAYER FORM */}
       {mode === "single" ? (
         <form onSubmit={handleAdd} style={{ display: "flex", gap: 4, flexWrap: "wrap", marginBottom: 8 }}>
-          <input 
-            className="brutal-input" style={{ flex: 1, minWidth: 80, fontSize: "0.65rem", padding: "4px" }} placeholder="Team" 
-            value={form.team_name} onChange={(e) => setForm({...form, team_name: e.target.value.toUpperCase()})} required 
-          />
+          {match ? (
+            <select className="brutal-select" style={{ flex: 1, minWidth: 80, fontSize: "0.65rem", padding: "4px" }}
+              value={form.team_name} onChange={e => setForm({...form, team_name: e.target.value})} required>
+              <option value="">— TEAM —</option>
+              <option value={match.home_team?.toUpperCase()}>{match.home_team?.toUpperCase()}</option>
+              <option value={match.away_team?.toUpperCase()}>{match.away_team?.toUpperCase()}</option>
+            </select>
+          ) : (
+            <input className="brutal-input" style={{ flex: 1, minWidth: 80, fontSize: "0.65rem", padding: "4px" }} placeholder="Team"
+              value={form.team_name} onChange={e => setForm({...form, team_name: e.target.value.toUpperCase()})} required />
+          )}
           <input 
             className="brutal-input" style={{ width: 40, fontSize: "0.65rem", padding: "4px" }} placeholder="#" 
             value={form.jersey_number} onChange={(e) => setForm({...form, jersey_number: e.target.value})} 
@@ -177,10 +184,17 @@ export default function TeamSheetManager({ matchId, onPlayerChange }) {
       ) : (
         <div style={{ marginBottom: 8 }}>
           <div style={{ display: "flex", gap: 4, marginBottom: 4 }}>
-            <input 
-              className="brutal-input" style={{ flex: 1, fontSize: "0.65rem", padding: "4px" }} placeholder="Team" 
-              value={form.team_name} onChange={(e) => setForm({...form, team_name: e.target.value.toUpperCase()})} required 
-            />
+            {match ? (
+              <select className="brutal-select" style={{ flex: 1, fontSize: "0.65rem", padding: "4px" }}
+                value={form.team_name} onChange={e => setForm({...form, team_name: e.target.value})} required>
+                <option value="">— TEAM —</option>
+                <option value={match.home_team?.toUpperCase()}>{match.home_team?.toUpperCase()}</option>
+                <option value={match.away_team?.toUpperCase()}>{match.away_team?.toUpperCase()}</option>
+              </select>
+            ) : (
+              <input className="brutal-input" style={{ flex: 1, fontSize: "0.65rem", padding: "4px" }} placeholder="Team"
+                value={form.team_name} onChange={e => setForm({...form, team_name: e.target.value.toUpperCase()})} required />
+            )}
             <button 
               onClick={handleBulkAdd} 
               className="brutal-btn" 
