@@ -487,7 +487,13 @@ export default function TaggerPage() {
             </div>
           ) : (
             <div style={{ flex: 1 }}>
-              {selectedMatch && <TeamSheetManager matchId={selectedMatchId} />}
+              {selectedMatch && <TeamSheetManager
+                matchId={selectedMatchId}
+                onPlayerChange={() => {
+                  supabase.from("team_sheets").select("*").eq("match_id", selectedMatchId)
+                    .then(({ data }) => setTeamSheet(data || []));
+                }}
+              />}
             </div>
           )}
         </div>

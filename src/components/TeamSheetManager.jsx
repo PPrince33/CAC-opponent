@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase";
 
-export default function TeamSheetManager({ matchId }) {
+export default function TeamSheetManager({ matchId, onPlayerChange }) {
   const [players, setPlayers] = useState([]);
   const [loading, setLoading] = useState(false);
   const [mode, setMode] = useState("single"); // "single" | "bulk"
@@ -43,7 +43,8 @@ export default function TeamSheetManager({ matchId }) {
       
     if (!error && data) {
       setPlayers((prev) => [...prev, data]);
-      setForm((prev) => ({ ...prev, player_name: "", jersey_number: "", position: "" })); // Keep team_name same for rapid entry
+      setForm((prev) => ({ ...prev, player_name: "", jersey_number: "", position: "" }));
+      onPlayerChange && onPlayerChange(); // notify parent
     }
   };
 
@@ -115,6 +116,7 @@ export default function TeamSheetManager({ matchId }) {
       setPlayers((prev) => [...prev, ...data]);
       setBulkText("");
       setMode("single");
+      onPlayerChange && onPlayerChange(); // notify parent
     }
     setLoading(false);
   };
@@ -123,6 +125,7 @@ export default function TeamSheetManager({ matchId }) {
     const { error } = await supabase.from("team_sheets").delete().eq("id", id);
     if (!error) {
       setPlayers((prev) => prev.filter(p => p.id !== id));
+      onPlayerChange && onPlayerChange(); // notify parent
     }
   };
 
