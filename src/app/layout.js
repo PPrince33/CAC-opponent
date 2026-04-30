@@ -3,9 +3,24 @@
 import "./globals.css";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useEffect, useState } from "react";
+import { supabase } from "@/lib/supabase";
 
 export default function RootLayout({ children }) {
   const pathname = usePathname();
+  const [user, setUser] = useState(null);
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setUser(session?.user ?? null);
+    });
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user ?? null);
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
 
   const navLinks = [
     { href: "/tagger", label: "⚡ Tagger" },
@@ -49,7 +64,7 @@ export default function RootLayout({ children }) {
             </div>
             <h1
               style={{ color: "#fff", fontSize: "1.3rem", fontWeight: 800 }}
-              className="tracking-wider"
+              className="tracking-wider hidden sm:block"
             >
               CAC{" "}
               <span style={{ color: "#34D399" }}>OPPONENT</span>{" "}
@@ -97,6 +112,24 @@ export default function RootLayout({ children }) {
                 </Link>
               );
             })}
+
+            {user && (
+              <button
+                onClick={async () => {
+                  await supabase.auth.signOut();
+                  setUser(null);
+                }}
+                className="brutal-btn ml-4"
+                style={{
+                  background: "#F87171",
+                  color: "#000",
+                  fontSize: "0.75rem",
+                  padding: "8px 16px",
+                }}
+              >
+                SIGN OUT
+              </button>
+            )}
           </nav>
         </header>
 

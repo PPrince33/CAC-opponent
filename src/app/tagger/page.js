@@ -2,10 +2,11 @@
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import { supabase } from "@/lib/supabase";
+import { useRouter } from "next/navigation";
 import GridPitch from "@/components/GridPitch";
 import CoordinatePitch from "@/components/CoordinatePitch";
 import ShotOutcomeModal from "@/components/ShotOutcomeModal";
-import CreateMatchModal from "@/components/CreateMatchModal";
+import MatchModal from "@/components/MatchModal";
 import EventLog from "@/components/EventLog";
 
 export default function TaggerPage() {
@@ -18,9 +19,23 @@ export default function TaggerPage() {
   const [direction, setDirection] = useState("L2R");
   const [timestamp, setTimestamp] = useState("");
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
   const [showShotModal, setShowShotModal] = useState(null); // { eventType, x, y }
   const [loading, setLoading] = useState(false);
+  const [authChecked, setAuthChecked] = useState(false);
   const videoRef = useRef(null);
+  const router = useRouter();
+
+  // ─── Check Auth ───
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (!session) {
+        router.replace("/login");
+      } else {
+        setAuthChecked(true);
+      }
+    });
+  }, [router]);
 
   // ─── Load matches ───
   useEffect(() => {
@@ -69,6 +84,23 @@ export default function TaggerPage() {
       setSelectedMatchId(data.id);
     }
     setShowCreateModal(false);
+    setLoading(false);
+  };
+
+  // ─── Edit match ───
+  const handleEditMatch = async (form) => {
+    setLoading(true);
+    const { data, error } = await supabase
+      .from("opp_matches")
+      .update(form)
+      .eq("id", selectedMatchId)
+      .select()
+      .single();
+    if (!error && data) {
+      await loadMatches();
+      setSelectedMatch(data);
+    }
+    setShowEditModal(false);
     setLoading(false);
   };
 
@@ -160,6 +192,8 @@ export default function TaggerPage() {
   const shotTakenEvents = events.filter((e) => e.event_type === "shot_taken");
   const shotConcededEvents = events.filter((e) => e.event_type === "shot_conceded");
 
+  if (!authChecked) return null; // Prevent flicker before redirect
+
   return (
     <div style={{ padding: 16, background: "var(--color-bg)", minHeight: "calc(100vh - 80px)" }}>
       {/* ─── MATCH SELECTOR BAR ─── */}
@@ -175,9 +209,16 @@ export default function TaggerPage() {
             ))}
           </select>
         </div>
-        <button onClick={() => setShowCreateModal(true)} className="brutal-btn" style={{ background: "#000", color: "#FACC15", fontSize: "0.75rem" }}>
-          + NEW MATCH
-        </button>
+        <div style={{ display: "flex", gap: 8 }}>
+          <button onClick={() => setShowCreateModal(true)} className="brutal-btn" style={{ background: "#000", color: "#FACC15", fontSize: "0.75rem" }}>
+            + NEW MATCH
+          </button>
+          {selectedMatchId && (
+            <button onClick={() => setShowEditModal(true)} className="brutal-btn" style={{ background: "#fff", color: "#000", fontSize: "0.75rem", border: "2px solid #000" }}>
+              ✎ EDIT MATCH
+            </button>
+          )}
+        </div>
         <div style={{ marginLeft: "auto", display: "flex", gap: 8, alignItems: "center" }}>
           {/* Half toggle */}
           <div style={{ display: "flex", gap: 0 }}>
@@ -241,7 +282,8 @@ export default function TaggerPage() {
       </div>
 
       {/* ─── MODALS ─── */}
-      {showCreateModal && <CreateMatchModal onSave={handleCreateMatch} onCancel={() => setShowCreateModal(false)} />}
+      {showCreateModal && <MatchModal onSave={handleCreateMatch} onCancel={() => setShowCreateModal(false)} />}
+      {showEditModal && <MatchModal initialData={selectedMatch} onSave={handleEditMatch} onCancel={() => setShowEditModal(false)} />}
       {showShotModal && <ShotOutcomeModal position={{ x: showShotModal.x, y: showShotModal.y }} onSelect={handleShotOutcome} onCancel={() => setShowShotModal(null)} />}
     </div>
   );
