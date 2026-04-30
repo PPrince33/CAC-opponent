@@ -396,6 +396,7 @@ export default function TaggerPage() {
       {activeEventData && (
         <HighlightModal 
           tool={tool}
+          match={selectedMatch}
           teamSheet={teamSheet}
           onSave={handleSaveEvent}
           onCancel={() => setActiveEventData(null)}

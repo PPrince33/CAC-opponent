@@ -37,19 +37,15 @@ export default function HighlightTaggerPitch({
       if (!onEventComplete) return;
       const { x, y } = getCoords(e);
 
-      if (tool === "shot") {
-        onEventComplete(x, y, null, null);
-      } else if (tool === "pass") {
-        if (!isDrawing) {
-          setStartPoint({ x, y });
-          setMousePoint({ x, y });
-          setIsDrawing(true);
-        } else {
-          onEventComplete(startPoint.x, startPoint.y, x, y);
-          setIsDrawing(false);
-          setStartPoint(null);
-          setMousePoint(null);
-        }
+      if (!isDrawing) {
+        setStartPoint({ x, y });
+        setMousePoint({ x, y });
+        setIsDrawing(true);
+      } else {
+        onEventComplete(startPoint.x, startPoint.y, x, y);
+        setIsDrawing(false);
+        setStartPoint(null);
+        setMousePoint(null);
       }
     },
     [onEventComplete, tool, isDrawing, startPoint]

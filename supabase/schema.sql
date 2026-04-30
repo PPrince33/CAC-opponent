@@ -190,6 +190,8 @@ CREATE TABLE IF NOT EXISTS highlight_events (
   action_player_id    UUID REFERENCES team_sheets(id) ON DELETE SET NULL,
   reaction_player_id  UUID REFERENCES team_sheets(id) ON DELETE SET NULL,
   shot_outcome        TEXT CHECK (shot_outcome IN ('miss', 'target', 'goal') OR shot_outcome IS NULL),
+  goal_x              FLOAT,
+  goal_y              FLOAT,
   created_at          TIMESTAMPTZ DEFAULT now()
 );
 
