@@ -170,19 +170,15 @@ export default function TaggerPage() {
       setTimestamp(currentTime);
     }
 
-    // If acting team is going R2L, flip coordinates to L2R before saving.
-    // This ensures ALL events in highlight_events are stored as L2R.
-    const isR2L = direction === 'R2L';
-    const flip = (v, max) => v != null ? max - v : null;
-
+    // Save raw coordinates. Normalization (Finish Highlight) handles R2L→L2R flipping.
     const payload = {
-      match_id: selectedMatchId,
-      timestamp: currentTime,
-      home_team_direction: direction, // stored as acting team's direction for reference
-      start_x: isR2L ? flip(activeEventData.startX, 120) : activeEventData.startX,
-      start_y: isR2L ? flip(activeEventData.startY, 80)  : activeEventData.startY,
-      end_x:   isR2L ? flip(activeEventData.endX,   120) : activeEventData.endX,
-      end_y:   isR2L ? flip(activeEventData.endY,   80)  : activeEventData.endY,
+      match_id:       selectedMatchId,
+      timestamp:      currentTime,
+      team_direction: direction,
+      start_x:        activeEventData.startX,
+      start_y:        activeEventData.startY,
+      end_x:          activeEventData.endX,
+      end_y:          activeEventData.endY,
       ...tagForm,
       action_player_id:   tagForm.action_player_id   || null,
       reaction_player_id: tagForm.reaction_player_id || null,
@@ -605,22 +601,14 @@ export default function TaggerPage() {
                           <option value="head">HEAD</option>
                         </select>
                       </td>
-                      {/* DIRECTION — from acting team's perspective */}
+                      {/* DIRECTION */}
                       <td style={s}>
-                        {(() => {
-                          const isAway = ev.action_team === selectedMatch?.away_team;
-                          const displayDir = isAway ? flipDir(ev.home_team_direction || 'L2R') : (ev.home_team_direction || 'L2R');
-                          return (
-                            <select className="brutal-select" style={{ fontSize: "0.65rem", padding: "2px 4px" }} value={displayDir}
-                              onChange={e => {
-                                const homeDir = isAway ? flipDir(e.target.value) : e.target.value;
-                                handleUpdateEvent(ev.id, 'home_team_direction', homeDir);
-                              }}>
-                              <option value="L2R">→ L2R</option>
-                              <option value="R2L">← R2L</option>
-                            </select>
-                          );
-                        })()}
+                        <select className="brutal-select" style={{ fontSize: "0.65rem", padding: "2px 4px" }}
+                          value={ev.team_direction || 'L2R'}
+                          onChange={e => handleUpdateEvent(ev.id, 'team_direction', e.target.value)}>
+                          <option value="L2R">→ L2R</option>
+                          <option value="R2L">← R2L</option>
+                        </select>
                       </td>
                       {/* REACTION PLAYER */}
                       <td style={s}>

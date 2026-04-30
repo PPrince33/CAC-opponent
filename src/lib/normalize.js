@@ -1,15 +1,21 @@
 /**
- * Normalization V2 — All events stored as L2R.
+ * Normalization V2
  *
- * The tagger already flips coordinates to L2R at save time (if direction was R2L).
- * So raw events in highlight_events are ALL L2R for the acting team.
+ * Rule: ALL normalized_highlight_events are stored as L2R.
+ *   - team_direction = 'L2R' → copy as-is
+ *   - team_direction = 'R2L' → flip: 120-x, 80-y for start and end coords
  *
- * Normalization simply copies them into normalized_highlight_events with direction='L2R'.
- * Dashboard colors distinguish teams (green=next opponent, red=others) — both L2R.
+ * Dashboard then flips opposition events for display (R2L) while keeping
+ * next opponent as L2R, giving a realistic match-view visualization.
  */
 export function normalizeHighlightEventV2(event) {
-  // Already L2R from tagger — no flipping needed
-  return { ...event };
+  if (event.team_direction !== 'R2L') return { ...event };
+  const n = { ...event };
+  if (n.start_x != null) n.start_x = 120 - n.start_x;
+  if (n.start_y != null) n.start_y = 80  - n.start_y;
+  if (n.end_x   != null) n.end_x   = 120 - n.end_x;
+  if (n.end_y   != null) n.end_y   = 80  - n.end_y;
+  return n;
 }
 
 export function normalizeHighlightEventsV2(events) {

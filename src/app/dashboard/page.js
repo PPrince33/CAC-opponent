@@ -4,14 +4,18 @@ import { useState, useEffect, useMemo, useRef } from "react";
 import { supabase } from "@/lib/supabase";
 import YouTube from "react-youtube";
 
-// ─── Symbol & colour helpers ──────────────────────────────────────────────────
+// ─── Colors ───────────────────────────────────────────────────────────────────
+const COLOR_OPP   = "#0277B6"; // Next opponent (selected team)
+const COLOR_OTHER = "#D90429"; // Opposition of opponent
+
+// ─── Symbol helpers ───────────────────────────────────────────────────────────
 function getEventSymbol(ev) {
-  if (ev.event_type === "key_pass" || ev.event_type === "assist") return "○";
+  if (ev.event_type === "key_pass" || ev.event_type === "assist") return null; // circle
   if (ev.shot_outcome === "goal")    return "⚽";
   if (ev.shot_outcome === "target")  return "★";
   if (ev.shot_outcome === "miss")    return "+";
   if (ev.shot_outcome === "blocked") return "✕";
-  return "○"; // fallback
+  return null;
 }
 
 function getOutcomeLabel(ev) {
@@ -21,82 +25,87 @@ function getOutcomeLabel(ev) {
   return map[ev.shot_outcome] || ev.shot_outcome.toUpperCase();
 }
 
-// ─── Pitch Legend ─────────────────────────────────────────────────────────────
-const LEGEND = [
-  { sym: "⚽", label: "Goal" },
-  { sym: "★", label: "On Target" },
-  { sym: "+", label: "Miss" },
-  { sym: "✕", label: "Blocked" },
-  { sym: "○", label: "Pass / Assist" },
-];
+// Flip x for R2L display
+const flipX = (x) => x != null ? 120 - x : null;
+const flipY = (y) => y != null ? 80  - y : null;
 
 // ─── Scouting Pitch ───────────────────────────────────────────────────────────
-function ScoutingPitch({ events, selectedEventId, onEventClick }) {
+function ScoutingPitch({ events, selectedEventId, onEventClick, selectedTeam }) {
+  const R = 1.8; // marker radius
+
   return (
     <div className="brutal-card" style={{ padding: 0, overflow: "hidden" }}>
       <div style={{ background: "#000", color: "#fff", padding: "8px 12px", fontWeight: 800, fontSize: "0.75rem", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
         <span>⚽ SCOUTING MAP</span>
-        <div style={{ display: "flex", gap: 12, fontSize: "0.6rem" }}>
-          <span style={{ color: "#34D399" }}>■ NEXT OPP</span>
-          <span style={{ color: "#F87171" }}>■ OTHERS</span>
-          {LEGEND.map(l => <span key={l.sym}>{l.sym} {l.label}</span>)}
+        <div style={{ display: "flex", gap: 14, fontSize: "0.62rem" }}>
+          <span style={{ color: COLOR_OPP   }}>■ {selectedTeam || "NEXT OPP"} (L→R)</span>
+          <span style={{ color: COLOR_OTHER }}>■ OPPOSITION (R→L)</span>
+          <span>⚽ Goal</span><span>★ On Target</span><span>+ Miss</span><span>✕ Blocked</span><span>○ Pass</span>
         </div>
       </div>
-      <div style={{ background: "#2D5A27", position: "relative", aspectRatio: "3/2" }}>
+      <div style={{ background: "#fff", position: "relative", aspectRatio: "3/2" }}>
         <svg viewBox="-3 -1 126 82" width="100%" height="100%" style={{ position: "absolute", inset: 0 }} preserveAspectRatio="xMidYMid meet">
           {/* Grass */}
-          <rect x="0" y="0" width="120" height="80" fill="#2D5A27" />
+          <rect x="0" y="0" width="120" height="80" fill="#f8f8f8" />
+
           {/* Goals */}
-          <rect x="-2.44" y="36.34" width="2.44" height="7.32" fill="#fff" stroke="#000" strokeWidth="0.2" />
-          <rect x="120"  y="36.34" width="2.44" height="7.32" fill="#fff" stroke="#000" strokeWidth="0.2" />
-          {/* Pitch lines */}
-          <rect x="0" y="0" width="120" height="80" fill="none" stroke="rgba(255,255,255,0.8)" strokeWidth="0.5" />
-          <line x1="60" y1="0" x2="60" y2="80" stroke="rgba(255,255,255,0.8)" strokeWidth="0.5" />
-          <circle cx="60" cy="40" r="9.15" fill="none" stroke="rgba(255,255,255,0.8)" strokeWidth="0.5" />
-          <circle cx="60" cy="40" r="0.4" fill="rgba(255,255,255,0.8)" />
+          <rect x="-2.44" y="36.34" width="2.44" height="7.32" fill="#fff" stroke="#000" strokeWidth="0.3" />
+          <rect x="120"   y="36.34" width="2.44" height="7.32" fill="#fff" stroke="#000" strokeWidth="0.3" />
+
+          {/* Pitch lines — black */}
+          <rect x="0" y="0" width="120" height="80" fill="none" stroke="#000" strokeWidth="0.5" />
+          <line x1="60" y1="0" x2="60" y2="80" stroke="#000" strokeWidth="0.5" />
+          <circle cx="60" cy="40" r="9.15" fill="none" stroke="#000" strokeWidth="0.5" />
+          <circle cx="60" cy="40" r="0.4" fill="#000" />
           {/* Left box */}
-          <rect x="0" y="19.85" width="16.5" height="40.3" fill="none" stroke="rgba(255,255,255,0.8)" strokeWidth="0.5" />
-          <rect x="0" y="30.85" width="5.5"  height="18.3" fill="none" stroke="rgba(255,255,255,0.8)" strokeWidth="0.5" />
-          <circle cx="11" cy="40" r="0.4" fill="rgba(255,255,255,0.8)" />
-          <path d="M 16.5 32.7 A 9.15 9.15 0 0 1 16.5 47.3" fill="none" stroke="rgba(255,255,255,0.8)" strokeWidth="0.5" />
+          <rect x="0" y="19.85" width="16.5" height="40.3" fill="none" stroke="#000" strokeWidth="0.5" />
+          <rect x="0" y="30.85" width="5.5"  height="18.3" fill="none" stroke="#000" strokeWidth="0.5" />
+          <circle cx="11" cy="40" r="0.4" fill="#000" />
+          <path d="M 16.5 32.7 A 9.15 9.15 0 0 1 16.5 47.3" fill="none" stroke="#000" strokeWidth="0.5" />
           {/* Right box */}
-          <rect x="103.5" y="19.85" width="16.5" height="40.3" fill="none" stroke="rgba(255,255,255,0.8)" strokeWidth="0.5" />
-          <rect x="114.5" y="30.85" width="5.5"  height="18.3" fill="none" stroke="rgba(255,255,255,0.8)" strokeWidth="0.5" />
-          <circle cx="109" cy="40" r="0.4" fill="rgba(255,255,255,0.8)" />
-          <path d="M 103.5 32.7 A 9.15 9.15 0 0 0 103.5 47.3" fill="none" stroke="rgba(255,255,255,0.8)" strokeWidth="0.5" />
+          <rect x="103.5" y="19.85" width="16.5" height="40.3" fill="none" stroke="#000" strokeWidth="0.5" />
+          <rect x="114.5" y="30.85" width="5.5"  height="18.3" fill="none" stroke="#000" strokeWidth="0.5" />
+          <circle cx="109" cy="40" r="0.4" fill="#000" />
+          <path d="M 103.5 32.7 A 9.15 9.15 0 0 0 103.5 47.3" fill="none" stroke="#000" strokeWidth="0.5" />
 
           {/* Events */}
           {events.map((ev, i) => {
+            const isNextOpp = ev.isNextOpponent;
+            const color = isNextOpp ? COLOR_OPP : COLOR_OTHER;
             const isSelected = selectedEventId === ev.id;
-            const color = ev.isNextOpponent ? "#34D399" : "#F87171";
             const symbol = getEventSymbol(ev);
-            const isPass = ev.event_type === "key_pass" || ev.event_type === "assist";
+            const isPass = !symbol;
+
+            // Opposition events are displayed as R2L (flip coords for display only)
+            const sx = isNextOpp ? ev.start_x : flipX(ev.start_x);
+            const sy = isNextOpp ? ev.start_y : flipY(ev.start_y);
+            const ex = isNextOpp ? ev.end_x   : flipX(ev.end_x);
+            const ey = isNextOpp ? ev.end_y   : flipY(ev.end_y);
+            const r = isSelected ? R * 1.4 : R;
+
             return (
               <g key={i} onClick={() => onEventClick && onEventClick(ev)} style={{ cursor: "pointer" }}>
-                {/* Vector line when selected */}
-                {isSelected && ev.end_x != null && ev.end_y != null && (
+                {/* Line when selected */}
+                {isSelected && ex != null && ey != null && (
                   <>
-                    <line x1={ev.start_x} y1={ev.start_y} x2={ev.end_x} y2={ev.end_y} stroke={color} strokeWidth="0.8" strokeDasharray="2,1" />
-                    <circle cx={ev.end_x} cy={ev.end_y} r="0.6" fill={color} />
+                    <line x1={sx} y1={sy} x2={ex} y2={ey} stroke={color} strokeWidth="0.8" strokeDasharray="2,1" />
+                    <circle cx={ex} cy={ey} r="0.6" fill={color} />
                   </>
                 )}
-                {/* Pass = open circle, others = emoji/symbol text */}
                 {isPass ? (
-                  <circle
-                    cx={ev.start_x} cy={ev.start_y}
-                    r={isSelected ? 2.2 : 1.6}
-                    fill="none" stroke={color} strokeWidth={isSelected ? 0.8 : 0.5}
-                    fillOpacity="0.9"
-                  />
+                  /* Pass/Assist = open circle */
+                  <circle cx={sx} cy={sy} r={r} fill="none" stroke={color} strokeWidth={isSelected ? 0.7 : 0.5} />
                 ) : (
-                  <text
-                    x={ev.start_x} y={ev.start_y}
-                    textAnchor="middle" dominantBaseline="central"
-                    fontSize={isSelected ? "4" : "3"}
-                    style={{ userSelect: "none", filter: isSelected ? "drop-shadow(0 0 1px #fff)" : "none" }}
-                  >
-                    {symbol}
-                  </text>
+                  /* Shot = filled circle + symbol text */
+                  <>
+                    <circle cx={sx} cy={sy} r={r} fill={color} fillOpacity={isSelected ? 1 : 0.85} stroke={isSelected ? "#000" : "none"} strokeWidth="0.3" />
+                    <text x={sx} y={sy} textAnchor="middle" dominantBaseline="central"
+                      fontSize={r * 1.4}
+                      fill="#fff"
+                      style={{ userSelect: "none", pointerEvents: "none" }}>
+                      {symbol}
+                    </text>
+                  </>
                 )}
               </g>
             );
@@ -109,23 +118,21 @@ function ScoutingPitch({ events, selectedEventId, onEventClick }) {
 
 // ─── Main Dashboard ────────────────────────────────────────────────────────────
 export default function DashboardPage() {
-  const [matches, setMatches]             = useState([]);
+  const [matches, setMatches]           = useState([]);
   const [normalizedEvents, setNormalizedEvents] = useState([]);
-  const [selectedTeam, setSelectedTeam]   = useState("");
+  const [selectedTeam, setSelectedTeam] = useState("");
   const [selectedMatchIds, setSelectedMatchIds] = useState([]);
-  const [activeEvent, setActiveEvent]     = useState(null);
-  const [loading, setLoading]             = useState(true);
+  const [activeEvent, setActiveEvent]   = useState(null);
+  const [loading, setLoading]           = useState(true);
 
-  // Filters
-  const [filterAction,    setFilterAction]    = useState("all");
-  const [filterOutcome,   setFilterOutcome]   = useState("all");
-  const [filterOpponent,  setFilterOpponent]  = useState("all");
+  const [filterAction,   setFilterAction]   = useState("all");
+  const [filterOutcome,  setFilterOutcome]  = useState("all");
+  const [filterOpponent, setFilterOpponent] = useState("all");
 
   const ytPlayerRef     = useRef(null);
   const videoRef        = useRef(null);
   const [activeVideoLink, setActiveVideoLink] = useState(null);
 
-  // Load all matches
   useEffect(() => {
     (async () => {
       const { data } = await supabase.from("opp_matches").select("*").order("match_date", { ascending: false });
@@ -134,32 +141,26 @@ export default function DashboardPage() {
     })();
   }, []);
 
-  // All unique team names for selector
   const allTeams = useMemo(() => {
     const set = new Set(matches.flatMap(m => [m.home_team, m.away_team]));
     return Array.from(set).sort();
   }, [matches]);
 
-  // Matches involving selected team
   const teamMatches = useMemo(() => {
     if (!selectedTeam) return [];
     return matches.filter(m => m.home_team === selectedTeam || m.away_team === selectedTeam);
   }, [selectedTeam, matches]);
 
-  // Auto-select all matches when team changes
   useEffect(() => {
     setSelectedMatchIds(teamMatches.map(m => m.id));
     setFilterOpponent("all");
   }, [teamMatches]);
 
-  // Unique previous opponents of selected team
-  const previousOpponents = useMemo(() => {
-    return teamMatches.map(m =>
-      m.home_team === selectedTeam ? m.away_team : m.home_team
-    ).filter((v, i, a) => a.indexOf(v) === i).sort();
-  }, [teamMatches, selectedTeam]);
+  const previousOpponents = useMemo(() =>
+    teamMatches.map(m => m.home_team === selectedTeam ? m.away_team : m.home_team)
+      .filter((v, i, a) => a.indexOf(v) === i).sort(),
+    [teamMatches, selectedTeam]);
 
-  // Load normalized events
   useEffect(() => {
     if (selectedMatchIds.length === 0) { setNormalizedEvents([]); return; }
     (async () => {
@@ -172,41 +173,32 @@ export default function DashboardPage() {
     })();
   }, [selectedMatchIds]);
 
-  // Enrich with flags
-  const enrichedEvents = useMemo(() => {
-    return normalizedEvents.map(ev => ({
-      ...ev,
-      isNextOpponent: ev.action_team === selectedTeam,
-    }));
-  }, [normalizedEvents, selectedTeam]);
+  const enrichedEvents = useMemo(() =>
+    normalizedEvents.map(ev => ({ ...ev, isNextOpponent: ev.action_team === selectedTeam })),
+    [normalizedEvents, selectedTeam]);
 
-  // Apply filters
-  const filteredEvents = useMemo(() => {
-    return enrichedEvents.filter(ev => {
-      if (filterAction !== "all" && ev.event_type !== filterAction) return false;
-      if (filterOutcome !== "all") {
-        if (filterOutcome === "successful" && ev.shot_outcome != null) return false;
-        if (filterOutcome !== "successful" && ev.shot_outcome !== filterOutcome) return false;
-      }
-      if (filterOpponent !== "all") {
-        // Find the match and check the opposing team
-        const match = matches.find(m => m.id === ev.match_id);
-        if (!match) return false;
-        const opponentInMatch = match.home_team === selectedTeam ? match.away_team : match.home_team;
-        if (opponentInMatch !== filterOpponent) return false;
-      }
-      return true;
-    });
-  }, [enrichedEvents, filterAction, filterOutcome, filterOpponent, matches, selectedTeam]);
+  const filteredEvents = useMemo(() => enrichedEvents.filter(ev => {
+    if (filterAction !== "all" && ev.event_type !== filterAction) return false;
+    if (filterOutcome !== "all") {
+      if (filterOutcome === "successful" && ev.shot_outcome != null) return false;
+      if (filterOutcome !== "successful" && ev.shot_outcome !== filterOutcome) return false;
+    }
+    if (filterOpponent !== "all") {
+      const match = matches.find(m => m.id === ev.match_id);
+      if (!match) return false;
+      const opp = match.home_team === selectedTeam ? match.away_team : match.home_team;
+      if (opp !== filterOpponent) return false;
+    }
+    return true;
+  }), [enrichedEvents, filterAction, filterOutcome, filterOpponent, matches, selectedTeam]);
 
-  // Stats
   const stats = useMemo(() => {
     const opp = filteredEvents.filter(e => e.isNextOpponent);
     return {
-      shots:   opp.filter(e => e.event_type === "shot").length,
-      goals:   opp.filter(e => e.shot_outcome === "goal").length,
-      passes:  opp.filter(e => e.event_type !== "shot").length,
-      total:   opp.length,
+      shots:  opp.filter(e => e.event_type === "shot").length,
+      goals:  opp.filter(e => e.shot_outcome === "goal").length,
+      passes: opp.filter(e => e.event_type !== "shot").length,
+      total:  opp.length,
     };
   }, [filteredEvents]);
 
@@ -222,11 +214,8 @@ export default function DashboardPage() {
     }, 300);
   };
 
-  const handleMatchToggle = (matchId) => {
-    setSelectedMatchIds(prev =>
-      prev.includes(matchId) ? prev.filter(id => id !== matchId) : [...prev, matchId]
-    );
-  };
+  const handleMatchToggle = (matchId) =>
+    setSelectedMatchIds(prev => prev.includes(matchId) ? prev.filter(id => id !== matchId) : [...prev, matchId]);
 
   let youtubeId = null;
   if (activeVideoLink) {
@@ -237,19 +226,17 @@ export default function DashboardPage() {
   const selStyle = { fontSize: "0.7rem", padding: "4px 8px" };
 
   return (
-    <div style={{ minHeight: "calc(100vh - 80px)", paddingBottom: 100 }}>
+    <div style={{ minHeight: "calc(100vh - 80px)", paddingBottom: 100, background: "#f5f5f5" }}>
 
       {/* ─── FILTER BAR ─── */}
       <div style={{ background: "#FACC15", border: "3px solid #000", borderTop: "none", borderLeft: "none", borderRight: "none", padding: "10px 16px", display: "flex", flexWrap: "wrap", gap: 10, alignItems: "center" }}>
 
-        {/* Team selector */}
         <label style={{ fontWeight: 900, fontSize: "0.75rem" }}>NEXT OPPONENT:</label>
         <select className="brutal-select" style={{ minWidth: 180 }} value={selectedTeam} onChange={e => { setSelectedTeam(e.target.value); setActiveEvent(null); }}>
           <option value="">— SELECT TEAM —</option>
           {allTeams.map(t => <option key={t} value={t}>{t}</option>)}
         </select>
 
-        {/* Previous opponent filter */}
         {previousOpponents.length > 0 && (
           <>
             <label style={{ fontWeight: 800, fontSize: "0.7rem" }}>VS:</label>
@@ -260,7 +247,6 @@ export default function DashboardPage() {
           </>
         )}
 
-        {/* Action filter */}
         <label style={{ fontWeight: 800, fontSize: "0.7rem" }}>ACTION:</label>
         <select className="brutal-select" style={selStyle} value={filterAction} onChange={e => setFilterAction(e.target.value)}>
           <option value="all">ALL</option>
@@ -269,7 +255,6 @@ export default function DashboardPage() {
           <option value="assist">ASSISTS</option>
         </select>
 
-        {/* Outcome filter */}
         <label style={{ fontWeight: 800, fontSize: "0.7rem" }}>OUTCOME:</label>
         <select className="brutal-select" style={selStyle} value={filterOutcome} onChange={e => setFilterOutcome(e.target.value)}>
           <option value="all">ALL</option>
@@ -277,12 +262,11 @@ export default function DashboardPage() {
           <option value="target">★ ON TARGET</option>
           <option value="miss">+ MISS</option>
           <option value="blocked">✕ BLOCKED</option>
-          <option value="successful">○ SUCCESSFUL (PASSES)</option>
+          <option value="successful">○ SUCCESSFUL</option>
         </select>
 
-        {/* Match toggles */}
         {teamMatches.length > 0 && (
-          <div style={{ display: "flex", gap: 4, flexWrap: "wrap", marginLeft: 4 }}>
+          <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
             {teamMatches.map(m => {
               const isSelected = selectedMatchIds.includes(m.id);
               return (
@@ -295,10 +279,9 @@ export default function DashboardPage() {
           </div>
         )}
 
-        {/* Stats */}
         {selectedTeam && (
           <div style={{ marginLeft: "auto", display: "flex", gap: 14, fontWeight: 900, fontSize: "0.75rem" }}>
-            <span>⚽ {stats.goals}</span>
+            <span style={{ color: COLOR_OPP }}>⚽ {stats.goals}</span>
             <span>SHOTS {stats.shots}</span>
             <span>PASSES {stats.passes}</span>
             <span>TOTAL {stats.total}</span>
@@ -313,38 +296,37 @@ export default function DashboardPage() {
           <div className="brutal-card" style={{ padding: 60, textAlign: "center" }}>
             <div style={{ fontSize: "2.5rem" }}>📊</div>
             <div style={{ fontWeight: 800, fontSize: "1.2rem", marginTop: 8 }}>SELECT YOUR NEXT OPPONENT</div>
-            <div style={{ color: "#666", fontSize: "0.8rem", marginTop: 6 }}>Choose a team to view all scouting data across matches</div>
+            <div style={{ color: "#666", fontSize: "0.8rem", marginTop: 6 }}>All scouted matches will appear here</div>
           </div>
         ) : filteredEvents.length === 0 ? (
           <div className="brutal-card" style={{ padding: 40, textAlign: "center" }}>
-            <div style={{ fontSize: "1.5rem" }}>⚠️</div>
-            <div style={{ fontWeight: 800 }}>NO DATA</div>
-            <div style={{ color: "#666", fontSize: "0.8rem", marginTop: 6 }}>
-              Tag highlights then click <b>✓ FINISH HIGHLIGHT</b> in the Tagger to process data for <b>{selectedTeam}</b>.
-            </div>
+            <div style={{ fontWeight: 800 }}>⚠️ NO DATA</div>
+            <div style={{ color: "#666", fontSize: "0.8rem", marginTop: 6 }}>Tag highlights then click <b>✓ FINISH HIGHLIGHT</b> in the Tagger.</div>
           </div>
         ) : (
           <div style={{ display: "grid", gridTemplateColumns: "1fr 400px", gap: 16 }}>
 
             {/* LEFT: PITCH */}
             <div>
-              <ScoutingPitch events={filteredEvents} selectedEventId={activeEvent?.id} onEventClick={handleEventClick} />
+              <ScoutingPitch
+                events={filteredEvents}
+                selectedEventId={activeEvent?.id}
+                onEventClick={handleEventClick}
+                selectedTeam={selectedTeam}
+              />
 
-              {/* Legend row */}
-              <div className="brutal-card" style={{ marginTop: 10, padding: "8px 12px", display: "flex", gap: 20, fontSize: "0.7rem", flexWrap: "wrap" }}>
-                <span><span style={{ color: "#34D399", fontWeight: 900 }}>■</span> {selectedTeam} (L→R)</span>
-                <span><span style={{ color: "#F87171", fontWeight: 900 }}>■</span> Opposition (R→L)</span>
-                {LEGEND.map(l => <span key={l.sym}>{l.sym} = {l.label}</span>)}
-                <span style={{ marginLeft: "auto", color: "#999" }}>Click dot → seek video</span>
+              <div className="brutal-card" style={{ marginTop: 10, padding: "8px 12px", display: "flex", gap: 20, fontSize: "0.68rem", flexWrap: "wrap", alignItems: "center" }}>
+                <span><span style={{ color: COLOR_OPP,   fontWeight: 900 }}>■</span> {selectedTeam} — L→R</span>
+                <span><span style={{ color: COLOR_OTHER, fontWeight: 900 }}>■</span> Opposition — R→L</span>
+                <span style={{ marginLeft: "auto", color: "#999" }}>Click event → seek video</span>
               </div>
 
-              {/* Matches breakdown */}
               <div className="brutal-card" style={{ marginTop: 10, padding: 10 }}>
-                <div style={{ fontWeight: 800, fontSize: "0.7rem", marginBottom: 6 }}>MATCHES IN VIEW</div>
+                <div style={{ fontWeight: 800, fontSize: "0.7rem", marginBottom: 6 }}>MATCHES</div>
                 {teamMatches.filter(m => selectedMatchIds.includes(m.id)).map(m => {
                   const cnt = filteredEvents.filter(e => e.match_id === m.id && e.isNextOpponent).length;
                   return (
-                    <div key={m.id} style={{ display: "flex", justifyContent: "space-between", fontSize: "0.68rem", padding: "4px 6px", background: "#f9f9f9", borderRadius: 3, marginBottom: 3 }}>
+                    <div key={m.id} style={{ display: "flex", justifyContent: "space-between", fontSize: "0.68rem", padding: "4px 6px", background: "#f9f9f9", marginBottom: 3 }}>
                       <span style={{ fontWeight: 700 }}>{m.home_team} vs {m.away_team}</span>
                       <span style={{ color: "#666" }}>{cnt} events from {selectedTeam}</span>
                     </div>
@@ -353,14 +335,12 @@ export default function DashboardPage() {
               </div>
             </div>
 
-            {/* RIGHT: VIDEO + EVENT LOG */}
+            {/* RIGHT: VIDEO + LOG */}
             <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-
-              {/* Video */}
               <div className="brutal-card" style={{ overflow: "hidden" }}>
                 <div style={{ background: "#000", color: "#fff", padding: "6px 12px", fontWeight: 800, fontSize: "0.7rem", display: "flex", justifyContent: "space-between" }}>
                   <span>📹 VIDEO</span>
-                  {activeEvent && <span style={{ color: "#FACC15" }}>{activeEvent.timestamp} — {getEventSymbol(activeEvent)} {activeEvent.event_type?.replace("_", " ").toUpperCase()}</span>}
+                  {activeEvent && <span style={{ color: "#FACC15" }}>{activeEvent.timestamp} — {activeEvent.event_type?.replace("_", " ").toUpperCase()}</span>}
                 </div>
                 <div style={{ aspectRatio: "16/9", background: "#111", display: "flex", alignItems: "center", justifyContent: "center" }}>
                   {!activeVideoLink ? (
@@ -376,13 +356,12 @@ export default function DashboardPage() {
                 </div>
               </div>
 
-              {/* Active event detail */}
               {activeEvent && (
-                <div className="brutal-card" style={{ padding: 10, borderLeft: `4px solid ${activeEvent.isNextOpponent ? "#34D399" : "#F87171"}` }}>
+                <div className="brutal-card" style={{ padding: 10, borderLeft: `4px solid ${activeEvent.isNextOpponent ? COLOR_OPP : COLOR_OTHER}` }}>
                   <div style={{ fontWeight: 800, fontSize: "0.7rem", marginBottom: 6 }}>SELECTED EVENT</div>
                   <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 4, fontSize: "0.68rem" }}>
-                    <div><span style={{ color: "#666" }}>TEAM</span><br/><b>{activeEvent.action_team}</b></div>
-                    <div><span style={{ color: "#666" }}>ACTION</span><br/><b>{getEventSymbol(activeEvent)} {activeEvent.event_type?.replace("_", " ").toUpperCase()}</b></div>
+                    <div><span style={{ color: "#666" }}>TEAM</span><br/><b style={{ color: activeEvent.isNextOpponent ? COLOR_OPP : COLOR_OTHER }}>{activeEvent.action_team}</b></div>
+                    <div><span style={{ color: "#666" }}>ACTION</span><br/><b>{activeEvent.event_type?.replace("_", " ").toUpperCase()}</b></div>
                     <div><span style={{ color: "#666" }}>OUTCOME</span><br/><b style={{ color: activeEvent.shot_outcome === "goal" ? "#16a34a" : "inherit" }}>{getOutcomeLabel(activeEvent)}</b></div>
                     <div><span style={{ color: "#666" }}>HALF</span><br/><b>{activeEvent.half || "—"}</b></div>
                     <div><span style={{ color: "#666" }}>BODY PART</span><br/><b>{activeEvent.body_part?.replace("_", " ").toUpperCase() || "—"}</b></div>
@@ -391,9 +370,8 @@ export default function DashboardPage() {
                 </div>
               )}
 
-              {/* Event log */}
               <div className="brutal-card" style={{ padding: 0, overflow: "hidden", flex: 1 }}>
-                <div style={{ background: "#000", color: "#34D399", padding: "5px 10px", fontWeight: 800, fontSize: "0.65rem" }}>
+                <div style={{ background: COLOR_OPP, color: "#fff", padding: "5px 10px", fontWeight: 800, fontSize: "0.65rem" }}>
                   {selectedTeam} — EVENT LOG ({filteredEvents.filter(e => e.isNextOpponent).length})
                 </div>
                 <div style={{ overflowY: "auto", maxHeight: 280 }}>
@@ -401,8 +379,8 @@ export default function DashboardPage() {
                     <div key={i} onClick={() => handleEventClick(ev)}
                       style={{ padding: "6px 10px", borderBottom: "1px solid #eee", cursor: "pointer", fontSize: "0.68rem",
                         display: "flex", justifyContent: "space-between", alignItems: "center",
-                        background: activeEvent?.id === ev.id ? "#f0fdf4" : "transparent" }}>
-                      <span style={{ fontWeight: 700, width: 36 }}>{ev.timestamp}</span>
+                        background: activeEvent?.id === ev.id ? "#e8f4fd" : "transparent" }}>
+                      <span style={{ fontWeight: 700, width: 36, color: COLOR_OPP }}>{ev.timestamp}</span>
                       <span style={{ flex: 1 }}>{ev.event_type?.replace("_", " ").toUpperCase()}</span>
                       <span style={{ color: ev.shot_outcome === "goal" ? "#16a34a" : "#555", fontWeight: ev.shot_outcome === "goal" ? 800 : 400 }}>
                         {getOutcomeLabel(ev)}
