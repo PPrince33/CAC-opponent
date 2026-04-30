@@ -170,20 +170,19 @@ export default function TaggerPage() {
       setTimestamp(currentTime);
     }
 
-    // home_team_direction is always from the HOME team's perspective.
-    // If acting team = away → flip the direction toggle value before storing.
-    const homeDir = tagForm.action_team === selectedMatch?.home_team
-      ? direction
-      : flipDir(direction);
+    // If acting team is going R2L, flip coordinates to L2R before saving.
+    // This ensures ALL events in highlight_events are stored as L2R.
+    const isR2L = direction === 'R2L';
+    const flip = (v, max) => v != null ? max - v : null;
 
     const payload = {
       match_id: selectedMatchId,
       timestamp: currentTime,
-      home_team_direction: homeDir,
-      start_x: activeEventData.startX,
-      start_y: activeEventData.startY,
-      end_x: activeEventData.endX,
-      end_y: activeEventData.endY,
+      home_team_direction: direction, // stored as acting team's direction for reference
+      start_x: isR2L ? flip(activeEventData.startX, 120) : activeEventData.startX,
+      start_y: isR2L ? flip(activeEventData.startY, 80)  : activeEventData.startY,
+      end_x:   isR2L ? flip(activeEventData.endX,   120) : activeEventData.endX,
+      end_y:   isR2L ? flip(activeEventData.endY,   80)  : activeEventData.endY,
       ...tagForm,
       action_player_id:   tagForm.action_player_id   || null,
       reaction_player_id: tagForm.reaction_player_id || null,
@@ -225,8 +224,10 @@ export default function TaggerPage() {
         .eq("match_id", selectedMatchId);
 
       // 3. Normalize each event
+      // Raw events are already stored as L2R for acting team.
+      // normalizeHighlightEventV2 flips non-scouted teams to R2L.
       const normalized = (rawEvents || []).map(ev => {
-        const norm = normalizeHighlightEventV2(ev, scoutedTeam, selectedMatch);
+        const norm = normalizeHighlightEventV2(ev, scoutedTeam);
         return {
           source_event_id:  ev.id,
           match_id:         ev.match_id,
@@ -349,10 +350,8 @@ export default function TaggerPage() {
               {finishLoading ? "PROCESSING..." : "✓ FINISH HIGHLIGHT"}
             </button>
           )}
-          <div style={{ display: "flex", gap: 0 }}>
-            <label style={{ fontSize: "0.65rem", fontWeight: 700, alignSelf: "center", marginRight: 4, color: "#000", whiteSpace: "nowrap" }}>
-              HOME DIR:
-            </label>
+          <div style={{ display: "flex", gap: 0, alignItems: "center" }}>
+            <label style={{ fontSize: "0.65rem", fontWeight: 700, marginRight: 4, color: "#000", whiteSpace: "nowrap" }}>DIR:</label>
             {["L2R", "R2L"].map((d) => (
               <button key={d} onClick={() => setDirection(d)} className="brutal-btn" style={{ background: direction === d ? "#000" : "#fff", color: direction === d ? "#34D399" : "#000", fontSize: "0.75rem", padding: "6px 14px" }}>
                 {d === "L2R" ? "→ L2R" : "← R2L"}

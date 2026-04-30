@@ -1,46 +1,33 @@
 /**
- * Normalize highlight events so the SCOUTED (opponent) team always attacks L→R.
+ * Normalization V2 — Simple rules:
  *
- * Rule: In normalized view —
- *   - Scouted team events (action_team === scoutedTeam) → L2R
- *   - Other team events → R2L (naturally, since they play in the same match)
+ * RAW EVENTS (highlight_events): ALL stored as L2R for the acting team.
+ * The tagger flips coordinates before saving if direction is R2L.
  *
- * We achieve this by checking which direction the scouted team is actually
- * attacking in the raw data, then mirroring ALL events if they're going R2L.
+ * NORMALIZED EVENTS (normalized_highlight_events):
+ *   - action_team === scoutedTeam  → keep L2R (scouted opponent always attacks L→R)
+ *   - action_team !== scoutedTeam  → flip to R2L (opposition attacks R→L)
  */
-export function normalizeHighlightEventV2(event, scoutedTeam, match) {
-  // Determine which direction the scouted team is attacking in this match
-  const scoutedTeamIsHome = match.home_team === scoutedTeam;
-  
-  let scoutedTeamL2R;
-  if (scoutedTeamIsHome) {
-    scoutedTeamL2R = event.home_team_direction === 'L2R';
-  } else {
-    // Away team always attacks opposite to home_team_direction
-    scoutedTeamL2R = event.home_team_direction === 'R2L';
-  }
+export function normalizeHighlightEventV2(event, scoutedTeam) {
+  const isScoutedTeam = event.action_team === scoutedTeam;
 
-  // If scouted team is already going L2R, no changes needed
-  if (scoutedTeamL2R) return { ...event };
+  // Scouted team: already L2R — no change
+  if (isScoutedTeam) return { ...event };
 
-  // Otherwise mirror ALL coordinates (both teams get flipped together)
-  const normalized = { ...event };
-  if (normalized.start_x != null) normalized.start_x = 120 - normalized.start_x;
-  if (normalized.start_y != null) normalized.start_y = 80 - normalized.start_y;
-  if (normalized.end_x != null)   normalized.end_x   = 120 - normalized.end_x;
-  if (normalized.end_y != null)   normalized.end_y   = 80 - normalized.end_y;
-
-  return normalized;
+  // Opposition: flip to R2L
+  const n = { ...event };
+  if (n.start_x != null) n.start_x = 120 - n.start_x;
+  if (n.start_y != null) n.start_y = 80  - n.start_y;
+  if (n.end_x   != null) n.end_x   = 120 - n.end_x;
+  if (n.end_y   != null) n.end_y   = 80  - n.end_y;
+  return n;
 }
 
-export function normalizeHighlightEventsV2(events, scoutedTeam, match) {
-  return events.map(e => normalizeHighlightEventV2(e, scoutedTeam, match));
+export function normalizeHighlightEventsV2(events, scoutedTeam) {
+  return events.map(e => normalizeHighlightEventV2(e, scoutedTeam));
 }
 
-// ──────────────────────────────────────────────────────────────────────────────
-// Legacy functions kept for backward compatibility with old opp_raw_events flow
-// ──────────────────────────────────────────────────────────────────────────────
-
+// ─── Legacy functions (kept for backward compat) ──────────────────────────────
 export function normalizeEvent(event, focusTeam, match) {
   const isHome = match.home_team === focusTeam;
   const dir = event.home_team_direction;
