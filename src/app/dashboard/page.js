@@ -16,7 +16,14 @@ function ScoutingPitch({ events, selectedEventId, onEventClick }) {
         </div>
       </div>
       <div style={{ background: "#2D5A27", position: "relative", aspectRatio: "3/2" }}>
-        <svg viewBox="0 0 120 80" width="100%" height="100%" style={{ position: "absolute", inset: 0 }} preserveAspectRatio="xMidYMid meet">
+        <svg viewBox="-3 -1 126 82" width="100%" height="100%" style={{ position: "absolute", inset: 0 }} preserveAspectRatio="xMidYMid meet">
+          {/* Pitch grass */}
+          <rect x="0" y="0" width="120" height="80" fill="#2D5A27" />
+
+          {/* ── GOAL POSTS ── */}
+          <rect x="-2.44" y="36.34" width="2.44" height="7.32" fill="#fff" stroke="#000" strokeWidth="0.2" />
+          <rect x="120" y="36.34" width="2.44" height="7.32" fill="#fff" stroke="#000" strokeWidth="0.2" />
+
           {/* Pitch outline */}
           <rect x="0" y="0" width="120" height="80" fill="none" stroke="rgba(255,255,255,0.8)" strokeWidth="0.5" />
           <line x1="60" y1="0" x2="60" y2="80" stroke="rgba(255,255,255,0.8)" strokeWidth="0.5" />

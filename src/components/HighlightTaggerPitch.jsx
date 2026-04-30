@@ -82,13 +82,20 @@ export default function HighlightTaggerPitch({
         onMouseMove={handleMouseMove}
       >
         <svg
-          viewBox="0 0 120 80"
+          viewBox="-3 -1 126 82"
           width="100%"
           height="100%"
           style={{ position: "absolute", inset: 0 }}
           preserveAspectRatio="xMidYMid meet"
         >
-          {/* Pitch outline */}
+          {/* Pitch grass background (clipped to pitch area) */}
+          <rect x="0" y="0" width="120" height="80" fill="#2D5A27" />
+
+          {/* ── GOAL POSTS ── */}
+          {/* Left goal (protrudes left) */}
+          <rect x="-2.44" y="36.34" width="2.44" height="7.32" fill="#fff" stroke="#000" strokeWidth="0.2" />
+          {/* Right goal (protrudes right) */}
+          <rect x="120" y="36.34" width="2.44" height="7.32" fill="#fff" stroke="#000" strokeWidth="0.2" />
           <rect x="0" y="0" width="120" height="80" fill="none" stroke="rgba(255,255,255,0.8)" strokeWidth="0.5" />
           
           {/* Center Line & Circle */}
