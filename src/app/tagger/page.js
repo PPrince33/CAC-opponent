@@ -17,10 +17,15 @@ export default function TaggerPage() {
   const [events, setEvents] = useState([]);
   const [teamSheet, setTeamSheet] = useState([]);
 
-  const [direction, setDirection] = useState("L2R");
+  const [direction, setDirection] = useState("L2R"); // always = HOME TEAM direction
   const [timestamp, setTimestamp] = useState("");
-  const [activeEventData, setActiveEventData] = useState(null); // { startX, startY, endX, endY }
+  const [activeEventData, setActiveEventData] = useState(null);
   const [selectedEventId, setSelectedEventId] = useState(null);
+
+  const flipDir = (d) => d === "L2R" ? "R2L" : "L2R";
+  // Derived: direction the current action_team is actually attacking
+  const actingTeamDirection = (teamName) =>
+    teamName === selectedMatch?.home_team ? direction : flipDir(direction);
 
   // Form state for inline tagging
   const [tagForm, setTagForm] = useState({
@@ -147,16 +152,21 @@ export default function TaggerPage() {
       setTimestamp(currentTime);
     }
 
+    // home_team_direction is always from the HOME team's perspective.
+    // If acting team = away → flip the direction toggle value before storing.
+    const homeDir = tagForm.action_team === selectedMatch?.home_team
+      ? direction
+      : flipDir(direction);
+
     const payload = {
       match_id: selectedMatchId,
       timestamp: currentTime,
-      home_team_direction: direction,
+      home_team_direction: homeDir,
       start_x: activeEventData.startX,
       start_y: activeEventData.startY,
       end_x: activeEventData.endX,
       end_y: activeEventData.endY,
       ...tagForm,
-      // Convert empty strings to null for UUID fields
       action_player_id:   tagForm.action_player_id   || null,
       reaction_player_id: tagForm.reaction_player_id || null,
     };
@@ -322,6 +332,9 @@ export default function TaggerPage() {
             </button>
           )}
           <div style={{ display: "flex", gap: 0 }}>
+            <label style={{ fontSize: "0.65rem", fontWeight: 700, alignSelf: "center", marginRight: 4, color: "#000", whiteSpace: "nowrap" }}>
+              HOME DIR:
+            </label>
             {["L2R", "R2L"].map((d) => (
               <button key={d} onClick={() => setDirection(d)} className="brutal-btn" style={{ background: direction === d ? "#000" : "#fff", color: direction === d ? "#34D399" : "#000", fontSize: "0.75rem", padding: "6px 14px" }}>
                 {d === "L2R" ? "→ L2R" : "← R2L"}
@@ -568,12 +581,22 @@ export default function TaggerPage() {
                           <option value="head">HEAD</option>
                         </select>
                       </td>
-                      {/* DIRECTION */}
+                      {/* DIRECTION — from acting team's perspective */}
                       <td style={s}>
-                        <select className="brutal-select" style={{ fontSize: "0.65rem", padding: "2px 4px" }} value={ev.home_team_direction || "L2R"} onChange={e => handleUpdateEvent(ev.id, 'home_team_direction', e.target.value)}>
-                          <option value="L2R">→ L2R</option>
-                          <option value="R2L">← R2L</option>
-                        </select>
+                        {(() => {
+                          const isAway = ev.action_team === selectedMatch?.away_team;
+                          const displayDir = isAway ? flipDir(ev.home_team_direction || 'L2R') : (ev.home_team_direction || 'L2R');
+                          return (
+                            <select className="brutal-select" style={{ fontSize: "0.65rem", padding: "2px 4px" }} value={displayDir}
+                              onChange={e => {
+                                const homeDir = isAway ? flipDir(e.target.value) : e.target.value;
+                                handleUpdateEvent(ev.id, 'home_team_direction', homeDir);
+                              }}>
+                              <option value="L2R">→ L2R</option>
+                              <option value="R2L">← R2L</option>
+                            </select>
+                          );
+                        })()}
                       </td>
                       {/* REACTION PLAYER */}
                       <td style={s}>
