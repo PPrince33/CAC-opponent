@@ -19,6 +19,7 @@ export default function TaggerPage() {
   const [direction, setDirection] = useState("L2R");
   const [timestamp, setTimestamp] = useState("");
   const [activeEventData, setActiveEventData] = useState(null); // { startX, startY, endX, endY }
+  const [selectedEventId, setSelectedEventId] = useState(null);
 
   // Form state for inline tagging
   const [tagForm, setTagForm] = useState({
@@ -172,12 +173,18 @@ export default function TaggerPage() {
     if (!error) setEvents((prev) => prev.filter((ev) => ev.id !== id));
   };
 
-  const handleSeek = (timestamp) => {
-    if (!timestamp) return;
-    const parts = timestamp.split(':');
-    const seconds = parseInt(parts[0]) * 60 + parseInt(parts[1]);
+  const handleSeek = (ev) => {
+    if (!ev || !ev.timestamp) return;
+    const parts = ev.timestamp.split(':');
+    let seconds = parseInt(parts[0]) * 60 + parseInt(parts[1]);
+    
+    // Seek to 5 seconds before, clamped at 0
+    seconds = Math.max(0, seconds - 5);
+    
     if (ytPlayerRef.current) ytPlayerRef.current.seekTo(seconds, true);
     else if (videoRef.current) { videoRef.current.currentTime = seconds; videoRef.current.play(); }
+    
+    setSelectedEventId(ev.id);
   };
 
   const handleGoalClick = (e) => {
@@ -256,8 +263,9 @@ export default function TaggerPage() {
           <div style={{ marginBottom: 4 }}>
             <HighlightTaggerPitch 
               events={events} 
+              selectedEventId={selectedEventId}
               onEventComplete={handlePitchInteraction} 
-              onEventClick={(ev) => handleSeek(ev.timestamp)} 
+              onEventClick={(ev) => handleSeek(ev)} 
             />
           </div>
 
@@ -382,7 +390,20 @@ export default function TaggerPage() {
           {filteredEvents.length === 0 ? <p style={{ fontSize: "0.8rem", color: "#666", textAlign: "center", padding: 64 }}>NO MATCHING EVENTS</p> : (
             <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.75rem" }}>
               <thead style={{ position: "sticky", top: 0, background: "#f0f0f0", borderBottom: "2px solid #000", zIndex: 1 }}><tr style={{ color: "#666", fontWeight: 700 }}><th style={{ padding: "12px 16px", textAlign: "left", width: 80 }}>TIME</th><th style={{ padding: "12px 16px", textAlign: "left", width: 40 }}>T</th><th style={{ padding: "12px 16px", textAlign: "left" }}>PLAYER</th><th style={{ padding: "12px 16px", textAlign: "left" }}>ACTION</th><th style={{ padding: "12px 16px", textAlign: "left" }}>OUTCOME</th><th style={{ padding: "12px 16px", textAlign: "right" }}></th></tr></thead>
-              <tbody>{filteredEvents.map((ev) => { const player = teamSheet.find(p => p.id === ev.action_player_id); return (<tr key={ev.id} onClick={() => handleSeek(ev.timestamp)} className="timeline-row" style={{ borderBottom: "1px solid #eee", cursor: "pointer" }}><td style={{ padding: "12px 16px", fontWeight: 800 }}>{ev.timestamp || "0'"}</td><td style={{ padding: "12px 16px" }}><div style={{ width: 10, height: 10, borderRadius: "50%", background: ev.team_type === 'focus_team' ? '#34D399' : '#F87171' }}></div></td><td style={{ padding: "12px 16px", fontWeight: 600 }}>{player ? `${player.jersey_number} ${player.player_name.toUpperCase()}` : "—"}</td><td style={{ padding: "12px 16px" }}>{ev.event_type.replace("_", " ").toUpperCase()}</td><td style={{ padding: "12px 16px", fontWeight: 700, color: ev.shot_outcome === "goal" ? "#34D399" : "#000" }}>{ev.shot_outcome ? ev.shot_outcome.toUpperCase() : "SUCCESSFUL"}</td><td style={{ padding: "12px 16px", textAlign: "right" }}><button onClick={(e) => { e.stopPropagation(); handleDeleteEvent(ev.id); }} style={{ color: "#ccc", background: "none", border: "none", cursor: "pointer", fontSize: "1.1rem" }}>✕</button></td></tr>); })}</tbody>
+              <tbody>{filteredEvents.map((ev) => { 
+                const player = teamSheet.find(p => p.id === ev.action_player_id); 
+                const isSelected = selectedEventId === ev.id;
+                return (
+                  <tr key={ev.id} onClick={() => handleSeek(ev)} className="timeline-row" style={{ borderBottom: "1px solid #eee", cursor: "pointer", background: isSelected ? "#f0fdf4" : "transparent" }}>
+                    <td style={{ padding: "12px 16px", fontWeight: 800 }}>{ev.timestamp || "0'"}</td>
+                    <td style={{ padding: "12px 16px" }}><div style={{ width: 10, height: 10, borderRadius: "50%", background: ev.team_type === 'focus_team' ? '#34D399' : '#F87171' }}></div></td>
+                    <td style={{ padding: "12px 16px", fontWeight: 600 }}>{player ? `${player.jersey_number} ${player.player_name.toUpperCase()}` : "—"}</td>
+                    <td style={{ padding: "12px 16px" }}>{ev.event_type.replace("_", " ").toUpperCase()}</td>
+                    <td style={{ padding: "12px 16px", fontWeight: 700, color: ev.shot_outcome === "goal" ? "#34D399" : "#000" }}>{ev.shot_outcome ? ev.shot_outcome.toUpperCase() : "SUCCESSFUL"}</td>
+                    <td style={{ padding: "12px 16px", textAlign: "right" }}><button onClick={(e) => { e.stopPropagation(); handleDeleteEvent(ev.id); }} style={{ color: "#ccc", background: "none", border: "none", cursor: "pointer", fontSize: "1.1rem" }}>✕</button></td>
+                  </tr>
+                ); 
+              })}</tbody>
             </table>
           )}
         </div>

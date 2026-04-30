@@ -5,6 +5,7 @@ import { useState, useRef, useCallback, useEffect } from "react";
 export default function HighlightTaggerPitch({
   title = "HIGHLIGHTS PITCH",
   events = [],
+  selectedEventId = null,
   onEventComplete,
   onEventClick,
 }) {
@@ -111,8 +112,9 @@ export default function HighlightTaggerPitch({
           <circle cx="109" cy="40" r="0.4" fill="rgba(255,255,255,0.8)" />
           <path d="M 103.5 32.7 A 9.15 9.15 0 0 0 103.5 47.3" fill="none" stroke="rgba(255,255,255,0.8)" strokeWidth="0.5" />
 
-          {/* Render logged events (Dots only, no lines) */}
+          {/* Render logged events */}
           {events.map((ev, i) => {
+            const isSelected = selectedEventId === ev.id;
             const color = ev.team_type === 'focus_team' ? "#34D399" : "#F87171";
             return (
               <g 
@@ -120,7 +122,13 @@ export default function HighlightTaggerPitch({
                 onClick={(e) => { e.stopPropagation(); onEventClick && onEventClick(ev); }}
                 style={{ cursor: "pointer" }}
               >
-                <circle cx={ev.start_x} cy={ev.start_y} r="1.4" fill={color} stroke="#000" strokeWidth="0.4" />
+                <circle cx={ev.start_x} cy={ev.start_y} r="1.4" fill={color} stroke={isSelected ? "#FFF" : "#000"} strokeWidth={isSelected ? 1 : 0.4} />
+                {isSelected && ev.end_x != null && ev.end_y != null && (
+                  <>
+                    <line x1={ev.start_x} y1={ev.start_y} x2={ev.end_x} y2={ev.end_y} stroke={color} strokeWidth="1" strokeDasharray="2,2" />
+                    <circle cx={ev.end_x} cy={ev.end_y} r="0.8" fill={color} />
+                  </>
+                )}
               </g>
             );
           })}
