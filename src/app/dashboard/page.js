@@ -192,19 +192,15 @@ export default function DashboardPage() {
                 mode="heatmap"
               />
 
-              {/* Shot maps — zoomed to penalty boxes */}
-              <CoordinatePitch
-                title={`🎯 ${selectedTeam} — SHOTS FOR`}
-                events={shotTakenEvents}
-                zoomToBox="right"
-                mode="display"
-              />
-              <CoordinatePitch
-                title={`🛡 ${selectedTeam} — SHOTS AGAINST`}
-                events={shotConcededEvents}
-                zoomToBox="left"
-                mode="display"
-              />
+              {/* Combined Shot map — full pitch */}
+              <div style={{ gridColumn: "1 / -1" }}>
+                <CoordinatePitch
+                  title={`🎯 ${selectedTeam} — SHOTS (LEFT: AGAINST, RIGHT: FOR)`}
+                  events={[...shotTakenEvents, ...shotConcededEvents]}
+                  zoomToBox={null}
+                  mode="display"
+                />
+              </div>
             </div>
           </>
         )}
