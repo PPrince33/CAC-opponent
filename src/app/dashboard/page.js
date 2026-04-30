@@ -304,7 +304,7 @@ export default function DashboardPage() {
             <div style={{ color: "#666", fontSize: "0.8rem", marginTop: 6 }}>Tag highlights then click <b>✓ FINISH HIGHLIGHT</b> in the Tagger.</div>
           </div>
         ) : (
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 400px", gap: 16 }}>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 400px", gap: 16, alignItems: "start" }}>
 
             {/* LEFT: PITCH */}
             <div>
@@ -336,8 +336,8 @@ export default function DashboardPage() {
             </div>
 
             {/* RIGHT: VIDEO + LOG */}
-            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-              <div className="brutal-card" style={{ overflow: "hidden" }}>
+            <div style={{ display: "flex", flexDirection: "column", gap: 10, height: "calc(100vh - 140px)", position: "sticky", top: 12 }}>
+              <div className="brutal-card" style={{ overflow: "hidden", flexShrink: 0 }}>
                 <div style={{ background: "#000", color: "#fff", padding: "6px 12px", fontWeight: 800, fontSize: "0.7rem", display: "flex", justifyContent: "space-between" }}>
                   <span>📹 VIDEO</span>
                   {activeEvent && <span style={{ color: "#FACC15" }}>{activeEvent.timestamp} — {activeEvent.event_type?.replace("_", " ").toUpperCase()}</span>}
@@ -357,7 +357,7 @@ export default function DashboardPage() {
               </div>
 
               {activeEvent && (
-                <div className="brutal-card" style={{ padding: 10, borderLeft: `4px solid ${activeEvent.isNextOpponent ? COLOR_OPP : COLOR_OTHER}` }}>
+                <div className="brutal-card" style={{ padding: 10, borderLeft: `4px solid ${activeEvent.isNextOpponent ? COLOR_OPP : COLOR_OTHER}`, flexShrink: 0 }}>
                   <div style={{ fontWeight: 800, fontSize: "0.7rem", marginBottom: 6 }}>SELECTED EVENT</div>
                   <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 4, fontSize: "0.68rem" }}>
                     <div><span style={{ color: "#666" }}>TEAM</span><br/><b style={{ color: activeEvent.isNextOpponent ? COLOR_OPP : COLOR_OTHER }}>{activeEvent.action_team}</b></div>
@@ -370,11 +370,12 @@ export default function DashboardPage() {
                 </div>
               )}
 
-              <div className="brutal-card" style={{ padding: 0, overflow: "hidden", flex: 1 }}>
-                <div style={{ background: COLOR_OPP, color: "#fff", padding: "5px 10px", fontWeight: 800, fontSize: "0.65rem" }}>
+              {/* EVENT LOG — fills all remaining height */}
+              <div className="brutal-card" style={{ padding: 0, overflow: "hidden", flex: 1, display: "flex", flexDirection: "column", minHeight: 0 }}>
+                <div style={{ background: COLOR_OPP, color: "#fff", padding: "5px 10px", fontWeight: 800, fontSize: "0.65rem", flexShrink: 0 }}>
                   {selectedTeam} — EVENT LOG ({filteredEvents.filter(e => e.isNextOpponent).length})
                 </div>
-                <div style={{ overflowY: "auto", maxHeight: 280 }}>
+                <div style={{ overflowY: "auto", flex: 1 }}>
                   {filteredEvents.filter(e => e.isNextOpponent).map((ev, i) => (
                     <div key={i} onClick={() => handleEventClick(ev)}
                       style={{ padding: "6px 10px", borderBottom: "1px solid #eee", cursor: "pointer", fontSize: "0.68rem",
