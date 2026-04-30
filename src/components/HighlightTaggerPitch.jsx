@@ -5,7 +5,6 @@ import { useState, useRef, useCallback, useEffect } from "react";
 export default function HighlightTaggerPitch({
   title = "HIGHLIGHTS PITCH",
   events = [],
-  tool = "shot", // 'shot' | 'pass'
   onEventComplete,
   onEventClick,
 }) {
@@ -14,13 +13,6 @@ export default function HighlightTaggerPitch({
   const [isDrawing, setIsDrawing] = useState(false);
   const [startPoint, setStartPoint] = useState(null);
   const [mousePoint, setMousePoint] = useState(null);
-
-  // If tool changes, reset drawing state
-  useEffect(() => {
-    setIsDrawing(false);
-    setStartPoint(null);
-    setMousePoint(null);
-  }, [tool]);
 
   const getCoords = (e) => {
     const rect = containerRef.current.getBoundingClientRect();
@@ -48,19 +40,19 @@ export default function HighlightTaggerPitch({
         setMousePoint(null);
       }
     },
-    [onEventComplete, tool, isDrawing, startPoint]
+    [onEventComplete, isDrawing, startPoint]
   );
 
   const handleMouseMove = useCallback(
     (e) => {
-      if (!isDrawing || tool !== "pass") return;
+      if (!isDrawing) return;
       setMousePoint(getCoords(e));
     },
-    [isDrawing, tool]
+    [isDrawing]
   );
 
   return (
-    <div>
+    <div className="brutal-card" style={{ padding: 0, overflow: "hidden" }}>
       <div
         style={{
           background: "#000",
@@ -68,8 +60,6 @@ export default function HighlightTaggerPitch({
           padding: "4px 8px",
           fontWeight: 800,
           fontSize: "0.65rem",
-          borderBottom: "none",
-          border: "3px solid #000",
           display: "flex",
           justifyContent: "space-between",
           alignItems: "center",
@@ -77,14 +67,16 @@ export default function HighlightTaggerPitch({
       >
         <span>{title}</span>
         <span style={{ color: "#FACC15", fontSize: "0.55rem" }}>
-          {tool === "shot" ? "LOG SHOT" : isDrawing ? "SET END" : "SET START"}
+          {isDrawing ? "CLICK END LOCATION" : "CLICK START LOCATION"}
         </span>
       </div>
 
       <div
         ref={containerRef}
-        className="pitch-container"
-        style={{ cursor: "crosshair", position: "relative" }}
+        style={{ 
+          cursor: "crosshair", position: "relative", background: "#2D5A27",
+          aspectRatio: "3/2"
+        }}
         onClick={handleClick}
         onMouseMove={handleMouseMove}
       >
@@ -101,19 +93,11 @@ export default function HighlightTaggerPitch({
           <circle cx="60" cy="40" r="9.15" fill="none" stroke="rgba(255,255,255,0.7)" strokeWidth="0.5" />
           <circle cx="60" cy="40" r="0.5" fill="rgba(255,255,255,0.7)" />
 
-          {/* Left penalty area */}
+          {/* Penalty areas */}
           <rect x="0" y="18" width="18" height="44" fill="none" stroke="rgba(255,255,255,0.7)" strokeWidth="0.5" />
-          <rect x="0" y="30" width="6" height="20" fill="none" stroke="rgba(255,255,255,0.7)" strokeWidth="0.5" />
-          <circle cx="12" cy="40" r="0.5" fill="rgba(255,255,255,0.7)" />
-          <path d="M 18 33.5 A 9.15 9.15 0 0 1 18 46.5" fill="none" stroke="rgba(255,255,255,0.7)" strokeWidth="0.5" />
-
-          {/* Right penalty area */}
           <rect x="102" y="18" width="18" height="44" fill="none" stroke="rgba(255,255,255,0.7)" strokeWidth="0.5" />
-          <rect x="114" y="30" width="6" height="20" fill="none" stroke="rgba(255,255,255,0.7)" strokeWidth="0.5" />
-          <circle cx="108" cy="40" r="0.5" fill="rgba(255,255,255,0.7)" />
-          <path d="M 102 33.5 A 9.15 9.15 0 0 0 102 46.5" fill="none" stroke="rgba(255,255,255,0.7)" strokeWidth="0.5" />
 
-          {/* Render already logged events (optional preview) */}
+          {/* Render logged events */}
           {events.map((ev, i) => {
             const isPass = ev.event_type !== 'shot' && ev.end_x != null && ev.end_y != null;
             const color = ev.team_type === 'focus_team' ? "#34D399" : "#F87171";
@@ -123,10 +107,10 @@ export default function HighlightTaggerPitch({
                 onClick={(e) => { e.stopPropagation(); onEventClick && onEventClick(ev); }}
                 style={{ cursor: "pointer" }}
               >
-                <circle cx={ev.start_x} cy={ev.start_y} r="1.2" fill={color} stroke="#000" strokeWidth="0.3" />
-                {isPass && (
+                <circle cx={ev.start_x} cy={ev.start_y} r="1.4" fill={color} stroke="#000" strokeWidth="0.4" />
+                {ev.end_x != null && ev.end_y != null && (
                   <>
-                    <line x1={ev.start_x} y1={ev.start_y} x2={ev.end_x} y2={ev.end_y} stroke={color} strokeWidth="0.6" strokeDasharray="1,1" />
+                    <line x1={ev.start_x} y1={ev.start_y} x2={ev.end_x} y2={ev.end_y} stroke={color} strokeWidth="0.8" strokeDasharray="1,1" />
                     <circle cx={ev.end_x} cy={ev.end_y} r="0.6" fill={color} />
                   </>
                 )}
@@ -134,17 +118,17 @@ export default function HighlightTaggerPitch({
             );
           })}
 
-          {/* Render drawing preview line */}
+          {/* Preview line */}
           {isDrawing && startPoint && mousePoint && (
             <g>
               <line
                 x1={startPoint.x} y1={startPoint.y}
                 x2={mousePoint.x} y2={mousePoint.y}
                 stroke="#FACC15"
-                strokeWidth="0.5"
-                strokeDasharray="1,1"
+                strokeWidth="1"
+                strokeDasharray="2,2"
               />
-              <circle cx={startPoint.x} cy={startPoint.y} r="0.8" fill="#FACC15" />
+              <circle cx={startPoint.x} cy={startPoint.y} r="1" fill="#FACC15" stroke="#000" strokeWidth="0.2" />
               <circle cx={mousePoint.x} cy={mousePoint.y} r="0.8" fill="#FACC15" />
             </g>
           )}

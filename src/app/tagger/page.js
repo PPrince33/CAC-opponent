@@ -18,7 +18,6 @@ export default function TaggerPage() {
 
   const [direction, setDirection] = useState("L2R");
   const [timestamp, setTimestamp] = useState("");
-  const [tool, setTool] = useState("shot"); // 'shot' or 'pass'
   const [activeEventData, setActiveEventData] = useState(null); // { startX, startY, endX, endY }
 
   // Form state for inline tagging
@@ -123,7 +122,6 @@ export default function TaggerPage() {
 
   const handlePitchInteraction = (startX, startY, endX, endY) => {
     setActiveEventData({ startX, startY, endX, endY });
-    setTagForm(f => ({ ...f, event_type: tool }));
   };
 
   const handleSaveEvent = useCallback(async () => {
@@ -254,12 +252,12 @@ export default function TaggerPage() {
         {/* RIGHT: SIDEBAR (PITCH & INLINE FORM) */}
         <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
           
-          <div className="brutal-card" style={{ padding: 8 }}>
-            <div style={{ display: "flex", gap: 4, marginBottom: 8 }}>
-              <button onClick={() => setTool("shot")} className="brutal-btn" style={{ flex: 1, fontSize: "0.65rem", padding: "4px", background: tool === "shot" ? "#000" : "#fff", color: tool === "shot" ? "#34D399" : "#000" }}>🎯 SHOT</button>
-              <button onClick={() => setTool("pass")} className="brutal-btn" style={{ flex: 1, fontSize: "0.65rem", padding: "4px", background: tool === "pass" ? "#000" : "#fff", color: tool === "pass" ? "#FACC15" : "#000" }}>↗️ PASS</button>
-            </div>
-            <HighlightTaggerPitch events={events} tool={tool} onEventComplete={handlePitchInteraction} onEventClick={(ev) => handleSeek(ev.timestamp)} />
+          <div style={{ marginBottom: 4 }}>
+            <HighlightTaggerPitch 
+              events={events} 
+              onEventComplete={handlePitchInteraction} 
+              onEventClick={(ev) => handleSeek(ev.timestamp)} 
+            />
           </div>
 
           {activeEventData ? (
@@ -293,7 +291,9 @@ export default function TaggerPage() {
                 <label style={{ fontSize: "0.6rem", fontWeight: 800, color: "#666" }}>2. ACTION & OUTCOME</label>
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6, marginTop: 4 }}>
                   <select className="brutal-select" style={{ fontSize: "0.65rem", padding: "4px" }} value={tagForm.event_type} onChange={e => setTagForm({...tagForm, event_type: e.target.value})}>
-                    {tool === "shot" ? <option value="shot">SHOT</option> : <><option value="key_pass">KEY PASS</option><option value="assist">ASSIST</option></>}
+                    <option value="shot">SHOT</option>
+                    <option value="key_pass">KEY PASS</option>
+                    <option value="assist">ASSIST</option>
                   </select>
                   {tagForm.event_type === "shot" ? (
                     <select className="brutal-select" style={{ fontSize: "0.65rem", padding: "4px" }} value={tagForm.shot_outcome} onChange={e => setTagForm({...tagForm, shot_outcome: e.target.value})}>
