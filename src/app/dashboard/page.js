@@ -29,9 +29,26 @@ function getOutcomeLabel(ev) {
 const flipX = (x) => x != null ? 120 - x : null;
 const flipY = (y) => y != null ? 80  - y : null;
 
+// ─── Heatmap grid builder ─────────────────────────────────────────────────────
+const HCOLS = 24, HROWS = 16;
+const CW = 120 / HCOLS, CH = 80 / HROWS;
+function buildHeatGrid(events) {
+  const g = Array.from({ length: HROWS }, () => Array(HCOLS).fill(0));
+  events.forEach(ev => {
+    if (ev.start_x == null || ev.start_y == null) return;
+    const c = Math.min(Math.floor(ev.start_x / CW), HCOLS - 1);
+    const r = Math.min(Math.floor(ev.start_y / CH), HROWS - 1);
+    g[r][c]++;
+  });
+  return g;
+}
+
 // ─── Scouting Pitch ───────────────────────────────────────────────────────────
-function ScoutingPitch({ events, selectedEventId, onEventClick, selectedTeam }) {
-  const R = 1.8; // marker radius
+function ScoutingPitch({ events, selectedEventId, onEventClick, selectedTeam, heatmapMode }) {
+  const R = 1.8;
+  const oppEvents = events.filter(e => e.isNextOpponent);
+  const heatGrid  = heatmapMode ? buildHeatGrid(oppEvents) : null;
+  const maxHeat   = heatGrid ? Math.max(1, ...heatGrid.flat()) : 1;
 
   return (
     <div className="brutal-card" style={{ padding: 0, overflow: "hidden" }}>
@@ -68,8 +85,20 @@ function ScoutingPitch({ events, selectedEventId, onEventClick, selectedTeam }) 
           <circle cx="109" cy="40" r="0.4" fill="#000" />
           <path d="M 103.5 32.7 A 9.15 9.15 0 0 0 103.5 47.3" fill="none" stroke="#000" strokeWidth="0.5" />
 
-          {/* Events */}
-          {events.map((ev, i) => {
+          {/* Heatmap overlay */}
+          {heatmapMode && heatGrid && heatGrid.map((row, ri) =>
+            row.map((cnt, ci) => cnt === 0 ? null : (
+              <rect key={`${ri}-${ci}`}
+                x={ci * CW} y={ri * CH} width={CW} height={CH}
+                fill={COLOR_OPP}
+                fillOpacity={Math.min(0.85, 0.1 + 0.75 * (cnt / maxHeat))}
+                rx="0.3"
+              />
+            ))
+          )}
+
+          {/* Events — hidden in heatmap mode */}
+          {!heatmapMode && events.map((ev, i) => {
             const isNextOpp = ev.isNextOpponent;
             const color = isNextOpp ? COLOR_OPP : COLOR_OTHER;
             const isSelected = selectedEventId === ev.id;
@@ -128,6 +157,9 @@ export default function DashboardPage() {
   const [filterAction,   setFilterAction]   = useState("all");
   const [filterOutcome,  setFilterOutcome]  = useState("all");
   const [filterOpponent, setFilterOpponent] = useState("all");
+  const [heatmapMode,    setHeatmapMode]    = useState(false);
+
+  const [teamSheets, setTeamSheets] = useState([]);
 
   const ytPlayerRef     = useRef(null);
   const videoRef        = useRef(null);
@@ -162,14 +194,14 @@ export default function DashboardPage() {
     [teamMatches, selectedTeam]);
 
   useEffect(() => {
-    if (selectedMatchIds.length === 0) { setNormalizedEvents([]); return; }
+    if (selectedMatchIds.length === 0) { setNormalizedEvents([]); setTeamSheets([]); return; }
     (async () => {
-      const { data } = await supabase
-        .from("normalized_highlight_events")
-        .select("*")
-        .in("match_id", selectedMatchIds)
-        .order("created_at", { ascending: true });
-      setNormalizedEvents(data || []);
+      const [evRes, tsRes] = await Promise.all([
+        supabase.from("normalized_highlight_events").select("*").in("match_id", selectedMatchIds).order("created_at", { ascending: true }),
+        supabase.from("team_sheets").select("*").in("match_id", selectedMatchIds),
+      ]);
+      setNormalizedEvents(evRes.data || []);
+      setTeamSheets(tsRes.data || []);
     })();
   }, [selectedMatchIds]);
 
@@ -201,6 +233,23 @@ export default function DashboardPage() {
       total:  opp.length,
     };
   }, [filteredEvents]);
+
+  // Player contribution stats
+  const playerStats = useMemo(() => {
+    const playerMap = Object.fromEntries(teamSheets.map(p => [p.id, p]));
+    const oppEvents = filteredEvents.filter(e => e.isNextOpponent && e.action_player_id);
+    const byPlayer = {};
+    oppEvents.forEach(ev => {
+      const pid = ev.action_player_id;
+      if (!byPlayer[pid]) byPlayer[pid] = { player: playerMap[pid], shots: 0, goals: 0, key_pass: 0, assist: 0 };
+      if (ev.event_type === "shot")     byPlayer[pid].shots++;
+      if (ev.shot_outcome === "goal")   byPlayer[pid].goals++;
+      if (ev.event_type === "key_pass") byPlayer[pid].key_pass++;
+      if (ev.event_type === "assist")   byPlayer[pid].assist++;
+    });
+    return Object.values(byPlayer).sort((a, b) => (b.shots + b.goals + b.key_pass + b.assist) - (a.shots + a.goals + a.key_pass + a.assist));
+  }, [filteredEvents, teamSheets]);
+
 
   const handleEventClick = (ev) => {
     setActiveEvent(ev);
@@ -265,6 +314,11 @@ export default function DashboardPage() {
           <option value="successful">○ SUCCESSFUL</option>
         </select>
 
+        <button onClick={() => setHeatmapMode(h => !h)} className="brutal-btn"
+          style={{ background: heatmapMode ? COLOR_OPP : "#fff", color: heatmapMode ? "#fff" : "#000", fontSize: "0.7rem", padding: "4px 12px", fontWeight: 800, border: `2px solid ${COLOR_OPP}` }}>
+          {heatmapMode ? "🔥 HEAT" : "○ MAP"}
+        </button>
+
         {teamMatches.length > 0 && (
           <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
             {teamMatches.map(m => {
@@ -313,6 +367,7 @@ export default function DashboardPage() {
                 selectedEventId={activeEvent?.id}
                 onEventClick={handleEventClick}
                 selectedTeam={selectedTeam}
+                heatmapMode={heatmapMode}
               />
 
               <div className="brutal-card" style={{ marginTop: 10, padding: "8px 12px", display: "flex", gap: 20, fontSize: "0.68rem", flexWrap: "wrap", alignItems: "center" }}>
@@ -333,6 +388,39 @@ export default function DashboardPage() {
                   );
                 })}
               </div>
+
+              {/* Player Contribution */}
+              {playerStats.length > 0 && (
+                <div className="brutal-card" style={{ marginTop: 10, padding: 0, overflow: "hidden" }}>
+                  <div style={{ background: COLOR_OPP, color: "#fff", padding: "5px 10px", fontWeight: 800, fontSize: "0.65rem" }}>PLAYER CONTRIBUTIONS — {selectedTeam}</div>
+                  <div style={{ overflowX: "auto" }}>
+                    <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.68rem" }}>
+                      <thead>
+                        <tr style={{ background: "#f0f0f0", borderBottom: "2px solid #000" }}>
+                          <th style={{ padding: "4px 8px", textAlign: "left" }}>#</th>
+                          <th style={{ padding: "4px 8px", textAlign: "left" }}>PLAYER</th>
+                          <th style={{ padding: "4px 8px", textAlign: "center", color: COLOR_OPP }}>SH</th>
+                          <th style={{ padding: "4px 8px", textAlign: "center", color: "#16a34a" }}>G</th>
+                          <th style={{ padding: "4px 8px", textAlign: "center" }}>KP</th>
+                          <th style={{ padding: "4px 8px", textAlign: "center" }}>AST</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {playerStats.map((ps, i) => (
+                          <tr key={i} style={{ borderBottom: "1px solid #eee", background: i % 2 === 0 ? "#fff" : "#f9f9f9" }}>
+                            <td style={{ padding: "4px 8px", color: "#999", fontWeight: 700 }}>{ps.player?.jersey_number || "—"}</td>
+                            <td style={{ padding: "4px 8px", fontWeight: 600 }}>{ps.player?.player_name || "Unknown"}</td>
+                            <td style={{ padding: "4px 8px", textAlign: "center", fontWeight: ps.shots > 0 ? 700 : 400, color: ps.shots > 0 ? COLOR_OPP : "#aaa" }}>{ps.shots || "—"}</td>
+                            <td style={{ padding: "4px 8px", textAlign: "center", fontWeight: ps.goals > 0 ? 800 : 400, color: ps.goals > 0 ? "#16a34a" : "#aaa" }}>{ps.goals || "—"}</td>
+                            <td style={{ padding: "4px 8px", textAlign: "center", color: ps.key_pass > 0 ? "#000" : "#aaa" }}>{ps.key_pass || "—"}</td>
+                            <td style={{ padding: "4px 8px", textAlign: "center", color: ps.assist > 0 ? "#000" : "#aaa" }}>{ps.assist || "—"}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* RIGHT: VIDEO + LOG */}
