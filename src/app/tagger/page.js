@@ -493,6 +493,7 @@ export default function TaggerPage() {
                   <th style={thStyle}>ACTION</th>
                   <th style={thStyle}>OUTCOME</th>
                   <th style={thStyle}>BODY PART</th>
+                  <th style={thStyle}>DIRECTION</th>
                   <th style={thStyle}>REACTION PLAYER</th>
                   <th style={{ ...thStyle, textAlign: "right" }}>DEL</th>
                 </tr>
@@ -565,6 +566,13 @@ export default function TaggerPage() {
                           <option value="right_foot">RIGHT FOOT</option>
                           <option value="left_foot">LEFT FOOT</option>
                           <option value="head">HEAD</option>
+                        </select>
+                      </td>
+                      {/* DIRECTION */}
+                      <td style={s}>
+                        <select className="brutal-select" style={{ fontSize: "0.65rem", padding: "2px 4px" }} value={ev.home_team_direction || "L2R"} onChange={e => handleUpdateEvent(ev.id, 'home_team_direction', e.target.value)}>
+                          <option value="L2R">→ L2R</option>
+                          <option value="R2L">← R2L</option>
                         </select>
                       </td>
                       {/* REACTION PLAYER */}
