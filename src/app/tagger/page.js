@@ -155,7 +155,10 @@ export default function TaggerPage() {
       start_y: activeEventData.startY,
       end_x: activeEventData.endX,
       end_y: activeEventData.endY,
-      ...tagForm
+      ...tagForm,
+      // Convert empty strings to null for UUID fields
+      action_player_id:   tagForm.action_player_id   || null,
+      reaction_player_id: tagForm.reaction_player_id || null,
     };
 
     const { data, error } = await supabase.from("highlight_events").insert([payload]).select().single();
