@@ -28,6 +28,7 @@ export default function TaggerPage() {
     reaction_player_id: "",
     shot_outcome: "",
     body_part: "",
+    half: "1st",
     goal_x: null,
     goal_y: null
   });
@@ -162,7 +163,7 @@ export default function TaggerPage() {
     if (data) {
       setEvents((prev) => [...prev, data]);
       setActiveEventData(null);
-      setTagForm({ team_type: "focus_team", event_type: "shot", action_player_id: "", reaction_player_id: "", shot_outcome: "", body_part: "", goal_x: null, goal_y: null });
+      setTagForm(f => ({ ...f, action_player_id: "", reaction_player_id: "", shot_outcome: "", body_part: "", goal_x: null, goal_y: null }));
     }
   }, [selectedMatchId, activeEventData, timestamp, direction, tagForm, ytPlayerRef, videoRef]);
 
@@ -289,7 +290,11 @@ export default function TaggerPage() {
               {/* STEP 2: ACTION & OUTCOME */}
               <div style={{ marginBottom: 12 }}>
                 <label style={{ fontSize: "0.6rem", fontWeight: 800, color: "#666" }}>2. ACTION & OUTCOME</label>
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6, marginTop: 4 }}>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 6, marginTop: 4 }}>
+                  <select className="brutal-select" style={{ fontSize: "0.65rem", padding: "4px" }} value={tagForm.half} onChange={e => setTagForm({...tagForm, half: e.target.value})}>
+                    <option value="1st">1ST HALF</option>
+                    <option value="2nd">2ND HALF</option>
+                  </select>
                   <select className="brutal-select" style={{ fontSize: "0.65rem", padding: "4px" }} value={tagForm.event_type} onChange={e => setTagForm({...tagForm, event_type: e.target.value})}>
                     <option value="shot">SHOT</option>
                     <option value="key_pass">KEY PASS</option>
@@ -305,7 +310,7 @@ export default function TaggerPage() {
                     </select>
                   ) : (
                     <select className="brutal-select" style={{ fontSize: "0.65rem", padding: "4px" }} value={tagForm.reaction_player_id} onChange={e => setTagForm({...tagForm, reaction_player_id: e.target.value})}>
-                      <option value="">— TARGET PLAYER —</option>
+                      <option value="">— TARGET —</option>
                       {teamSheet
                         .filter(p => {
                           const targetTeam = tagForm.team_type === "focus_team" ? selectedMatch?.home_team : selectedMatch?.away_team;

@@ -193,6 +193,7 @@ CREATE TABLE IF NOT EXISTS highlight_events (
   goal_x              FLOAT,
   goal_y              FLOAT,
   body_part           TEXT,
+  half                TEXT,
   created_at          TIMESTAMPTZ DEFAULT now()
 );
 

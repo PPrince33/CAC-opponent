@@ -88,14 +88,28 @@ export default function HighlightTaggerPitch({
           preserveAspectRatio="xMidYMid meet"
         >
           {/* Pitch outline */}
-          <rect x="0" y="0" width="120" height="80" fill="none" stroke="rgba(255,255,255,0.7)" strokeWidth="0.5" />
-          <line x1="60" y1="0" x2="60" y2="80" stroke="rgba(255,255,255,0.7)" strokeWidth="0.5" />
-          <circle cx="60" cy="40" r="9.15" fill="none" stroke="rgba(255,255,255,0.7)" strokeWidth="0.5" />
-          <circle cx="60" cy="40" r="0.5" fill="rgba(255,255,255,0.7)" />
+          <rect x="0" y="0" width="120" height="80" fill="none" stroke="rgba(255,255,255,0.8)" strokeWidth="0.5" />
+          
+          {/* Center Line & Circle */}
+          <line x1="60" y1="0" x2="60" y2="80" stroke="rgba(255,255,255,0.8)" strokeWidth="0.5" />
+          <circle cx="60" cy="40" r="9.15" fill="none" stroke="rgba(255,255,255,0.8)" strokeWidth="0.5" />
+          <circle cx="60" cy="40" r="0.4" fill="rgba(255,255,255,0.8)" />
 
-          {/* Penalty areas */}
-          <rect x="0" y="18" width="18" height="44" fill="none" stroke="rgba(255,255,255,0.7)" strokeWidth="0.5" />
-          <rect x="102" y="18" width="18" height="44" fill="none" stroke="rgba(255,255,255,0.7)" strokeWidth="0.5" />
+          {/* Left Side Markings */}
+          {/* Penalty Box: 16.5m deep, 40.3m wide (Centered: 40 - 20.15 to 40 + 20.15) */}
+          <rect x="0" y="19.85" width="16.5" height="40.3" fill="none" stroke="rgba(255,255,255,0.8)" strokeWidth="0.5" />
+          {/* Goal Area: 5.5m deep, 18.3m wide (Centered: 40 - 9.15 to 40 + 9.15) */}
+          <rect x="0" y="30.85" width="5.5" height="18.3" fill="none" stroke="rgba(255,255,255,0.8)" strokeWidth="0.5" />
+          {/* Penalty Spot: 11m from goal line */}
+          <circle cx="11" cy="40" r="0.4" fill="rgba(255,255,255,0.8)" />
+          {/* Penalty Arc: 9.15m radius from spot (11,40), outside box (x > 16.5) */}
+          <path d="M 16.5 32.7 A 9.15 9.15 0 0 1 16.5 47.3" fill="none" stroke="rgba(255,255,255,0.8)" strokeWidth="0.5" />
+
+          {/* Right Side Markings */}
+          <rect x="103.5" y="19.85" width="16.5" height="40.3" fill="none" stroke="rgba(255,255,255,0.8)" strokeWidth="0.5" />
+          <rect x="114.5" y="30.85" width="5.5" height="18.3" fill="none" stroke="rgba(255,255,255,0.8)" strokeWidth="0.5" />
+          <circle cx="109" cy="40" r="0.4" fill="rgba(255,255,255,0.8)" />
+          <path d="M 103.5 32.7 A 9.15 9.15 0 0 0 103.5 47.3" fill="none" stroke="rgba(255,255,255,0.8)" strokeWidth="0.5" />
 
           {/* Render logged events */}
           {events.map((ev, i) => {
@@ -128,8 +142,8 @@ export default function HighlightTaggerPitch({
                 strokeWidth="1"
                 strokeDasharray="2,2"
               />
-              <circle cx={startPoint.x} cy={startPoint.y} r="1" fill="#FACC15" stroke="#000" strokeWidth="0.2" />
-              <circle cx={mousePoint.x} cy={mousePoint.y} r="0.8" fill="#FACC15" />
+              <circle cx={startPoint.x} cy={startPoint.y} r="1.2" fill="#FACC15" stroke="#000" strokeWidth="0.3" />
+              <circle cx={mousePoint.x} cy={mousePoint.y} r="1" fill="#FACC15" />
             </g>
           )}
         </svg>
