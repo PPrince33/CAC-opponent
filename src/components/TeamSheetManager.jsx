@@ -48,7 +48,7 @@ export default function TeamSheetManager({ matchId }) {
   };
 
   const handleBulkAdd = async () => {
-    if (!matchId || !form.team_name || !bulkText) return;
+    if (!matchId || !bulkText) return;
     
     const lines = bulkText.split("\n").filter(l => l.trim());
     const newPlayers = lines.map(line => {
@@ -58,15 +58,31 @@ export default function TeamSheetManager({ matchId }) {
       else if (line.includes("\t")) parts = line.split("\t").map(p => p.trim());
       else parts = line.split(/\s+/).map(p => p.trim());
 
-      // Format expected: [JerseyNumber] PlayerName [Position]
-      // Very loose parsing:
+      let team = form.team_name;
       let jersey = "";
       let name = "";
       let pos = "";
 
-      if (parts.length === 1) {
-        name = parts[0];
-      } else if (parts.length === 2) {
+      // If 4+ parts, assume: Team, Jersey, Name, Position
+      if (parts.length >= 4) {
+        team = parts[0];
+        jersey = parts[1];
+        name = parts[2];
+        pos = parts.slice(3).join(" ");
+      } 
+      // If 3 parts, assume: Jersey, Name, Position (uses default team)
+      else if (parts.length === 3) {
+        if (!isNaN(parts[0])) {
+          jersey = parts[0];
+          name = parts[1];
+          pos = parts[2];
+        } else {
+          name = parts[0];
+          pos = parts.slice(1).join(" ");
+        }
+      }
+      // If 2 parts, assume: Jersey, Name
+      else if (parts.length === 2) {
         if (!isNaN(parts[0])) {
           jersey = parts[0];
           name = parts[1];
@@ -74,20 +90,13 @@ export default function TeamSheetManager({ matchId }) {
           name = parts[0];
           pos = parts[1];
         }
-      } else if (parts.length >= 3) {
-        if (!isNaN(parts[0])) {
-          jersey = parts[0];
-          name = parts[1];
-          pos = parts.slice(2).join(" ");
-        } else {
-          name = parts[0];
-          pos = parts.slice(1).join(" ");
-        }
+      } else if (parts.length === 1) {
+        name = parts[0];
       }
 
       return {
         match_id: matchId,
-        team_name: form.team_name,
+        team_name: team || "Unknown",
         player_name: name,
         jersey_number: jersey,
         position: pos
@@ -177,7 +186,7 @@ export default function TeamSheetManager({ matchId }) {
           <textarea 
             className="brutal-input" 
             style={{ width: "100%", height: 60, fontSize: "0.6rem", fontFamily: "monospace", padding: "4px" }} 
-            placeholder="Jersey# Name Position"
+            placeholder="Team, Jersey, Name, Pos&#10;Example:&#10;PSG, 10, Messi, FW&#10;Inter, 10, Lautaro, FW"
             value={bulkText}
             onChange={(e) => setBulkText(e.target.value)}
           />
