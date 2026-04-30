@@ -600,9 +600,19 @@ export default function TaggerPage() {
                       <td style={s}>
                         <select className="brutal-select" style={{ fontSize: "0.65rem", padding: "2px 4px", maxWidth: 130 }} value={ev.action_player_id || ""} onChange={e => handleUpdateEvent(ev.id, 'action_player_id', e.target.value)}>
                           <option value="">— PLAYER —</option>
-                          {teamSheet.filter(p => !ev.action_team || p.team_name === ev.action_team).map(p => (
-                            <option key={p.id} value={p.id}>{p.jersey_number} {p.player_name}</option>
-                          ))}
+                          {(() => {
+                            const t = (ev.action_team || '').toUpperCase().trim();
+                            const filtered = teamSheet.filter(p => {
+                              if (!t) return true;
+                              const pn = (p.team_name || '').toUpperCase().trim();
+                              return pn === t || t.startsWith(pn) || pn.startsWith(t) || t.includes(pn) || pn.includes(t);
+                            });
+                            const list = filtered.length > 0 ? filtered : teamSheet;
+                            return list.map(p => (
+                              <option key={p.id} value={p.id}>{p.jersey_number} {p.player_name}</option>
+                            ));
+                          })()}
+
                         </select>
                       </td>
                       {/* ACTION TYPE */}
