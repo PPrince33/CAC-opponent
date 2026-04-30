@@ -165,6 +165,10 @@ export default function TeamSheetManager({ matchId }) {
             className="brutal-input" style={{ flex: 2, minWidth: 100, fontSize: "0.65rem", padding: "4px" }} placeholder="Name" 
             value={form.player_name} onChange={(e) => setForm({...form, player_name: e.target.value})} required 
           />
+          <input 
+            className="brutal-input" style={{ width: 40, fontSize: "0.65rem", padding: "4px" }} placeholder="Pos" 
+            value={form.position} onChange={(e) => setForm({...form, position: e.target.value})} 
+          />
           <button type="submit" className="brutal-btn" style={{ background: "#2DD4BF", fontSize: "0.65rem", padding: "4px 8px" }}>+</button>
         </form>
       ) : (
@@ -204,6 +208,7 @@ export default function TeamSheetManager({ matchId }) {
                 <th style={{ padding: 4, textAlign: "left" }}>T</th>
                 <th style={{ padding: 4, textAlign: "left" }}>#</th>
                 <th style={{ padding: 4, textAlign: "left" }}>NAME</th>
+                <th style={{ padding: 4, textAlign: "left" }}>P</th>
                 <th style={{ padding: 4 }}></th>
               </tr>
             </thead>
@@ -213,6 +218,7 @@ export default function TeamSheetManager({ matchId }) {
                   <td style={{ padding: "4px" }}>{p.team_name.substring(0, 3)}</td>
                   <td style={{ padding: "4px" }}>{p.jersey_number}</td>
                   <td style={{ padding: "4px", fontWeight: 600 }}>{p.player_name}</td>
+                  <td style={{ padding: "4px" }}>{p.position}</td>
                   <td style={{ padding: "4px", textAlign: "right" }}>
                     <button onClick={() => handleDelete(p.id)} style={{ color: "red", fontWeight: 800 }}>✕</button>
                   </td>
