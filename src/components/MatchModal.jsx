@@ -9,6 +9,7 @@ export default function MatchModal({ initialData, onSave, onCancel }) {
   );
 
   const update = (key, val) => setForm((f) => ({ ...f, [key]: val }));
+  const updateUpper = (key, val) => setForm((f) => ({ ...f, [key]: val.toUpperCase() }));
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -26,11 +27,11 @@ export default function MatchModal({ initialData, onSave, onCancel }) {
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
             <div>
               <label style={{ fontSize: "0.7rem", fontWeight: 700, marginBottom: 4, display: "block" }}>HOME TEAM</label>
-              <input className="brutal-input" style={{ width: "100%" }} value={form.home_team} onChange={(e) => update("home_team", e.target.value)} required />
+              <input className="brutal-input" style={{ width: "100%", textTransform: "uppercase" }} value={form.home_team} onChange={(e) => updateUpper("home_team", e.target.value)} required />
             </div>
             <div>
               <label style={{ fontSize: "0.7rem", fontWeight: 700, marginBottom: 4, display: "block" }}>AWAY TEAM</label>
-              <input className="brutal-input" style={{ width: "100%" }} value={form.away_team} onChange={(e) => update("away_team", e.target.value)} required />
+              <input className="brutal-input" style={{ width: "100%", textTransform: "uppercase" }} value={form.away_team} onChange={(e) => updateUpper("away_team", e.target.value)} required />
             </div>
           </div>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10 }}>

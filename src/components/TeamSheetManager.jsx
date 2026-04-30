@@ -158,7 +158,7 @@ export default function TeamSheetManager({ matchId, onPlayerChange }) {
         <form onSubmit={handleAdd} style={{ display: "flex", gap: 4, flexWrap: "wrap", marginBottom: 8 }}>
           <input 
             className="brutal-input" style={{ flex: 1, minWidth: 80, fontSize: "0.65rem", padding: "4px" }} placeholder="Team" 
-            value={form.team_name} onChange={(e) => setForm({...form, team_name: e.target.value})} required 
+            value={form.team_name} onChange={(e) => setForm({...form, team_name: e.target.value.toUpperCase()})} required 
           />
           <input 
             className="brutal-input" style={{ width: 40, fontSize: "0.65rem", padding: "4px" }} placeholder="#" 
@@ -166,7 +166,7 @@ export default function TeamSheetManager({ matchId, onPlayerChange }) {
           />
           <input 
             className="brutal-input" style={{ flex: 2, minWidth: 100, fontSize: "0.65rem", padding: "4px" }} placeholder="Name" 
-            value={form.player_name} onChange={(e) => setForm({...form, player_name: e.target.value})} required 
+            value={form.player_name} onChange={(e) => setForm({...form, player_name: e.target.value.toUpperCase()})} required 
           />
           <input 
             className="brutal-input" style={{ width: 40, fontSize: "0.65rem", padding: "4px" }} placeholder="Pos" 
@@ -179,7 +179,7 @@ export default function TeamSheetManager({ matchId, onPlayerChange }) {
           <div style={{ display: "flex", gap: 4, marginBottom: 4 }}>
             <input 
               className="brutal-input" style={{ flex: 1, fontSize: "0.65rem", padding: "4px" }} placeholder="Team" 
-              value={form.team_name} onChange={(e) => setForm({...form, team_name: e.target.value})} required 
+              value={form.team_name} onChange={(e) => setForm({...form, team_name: e.target.value.toUpperCase()})} required 
             />
             <button 
               onClick={handleBulkAdd} 
