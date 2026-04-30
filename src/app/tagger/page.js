@@ -28,6 +28,7 @@ export default function TaggerPage() {
     action_player_id: "",
     reaction_player_id: "",
     shot_outcome: "",
+    body_part: "",
     goal_x: null,
     goal_y: null
   });
@@ -124,7 +125,7 @@ export default function TaggerPage() {
     if (!error && data) {
       setEvents((prev) => [...prev, data]);
       setActiveEventData(null);
-      setTagForm({ team_type: "focus_team", event_type: "shot", action_player_id: "", reaction_player_id: "", shot_outcome: "", goal_x: null, goal_y: null });
+      setTagForm({ team_type: "focus_team", event_type: "shot", action_player_id: "", reaction_player_id: "", shot_outcome: "", body_part: "", goal_x: null, goal_y: null });
     }
   };
 
@@ -255,6 +256,16 @@ export default function TaggerPage() {
                   <select className="brutal-select w-full" style={{ fontSize: "0.65rem", padding: "4px" }} value={tagForm.reaction_player_id} onChange={e => setTagForm({...tagForm, reaction_player_id: e.target.value})}>
                     <option value="">— SELECT —</option>
                     {teamSheet.map(p => (<option key={p.id} value={p.id}>{p.jersey_number} {p.player_name}</option>))}
+                  </select>
+                </div>
+                <div>
+                  <label style={{ fontSize: "0.6rem", fontWeight: 800 }}>BODY PART</label>
+                  <select className="brutal-select w-full" style={{ fontSize: "0.65rem", padding: "4px" }} value={tagForm.body_part} onChange={e => setTagForm({...tagForm, body_part: e.target.value})}>
+                    <option value="">— SELECT —</option>
+                    <option value="right_foot">RIGHT FOOT</option>
+                    <option value="left_foot">LEFT FOOT</option>
+                    <option value="head">HEAD</option>
+                    <option value="other">OTHER</option>
                   </select>
                 </div>
               </div>

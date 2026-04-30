@@ -192,6 +192,7 @@ CREATE TABLE IF NOT EXISTS highlight_events (
   shot_outcome        TEXT CHECK (shot_outcome IN ('miss', 'target', 'goal', 'blocked') OR shot_outcome IS NULL),
   goal_x              FLOAT,
   goal_y              FLOAT,
+  body_part           TEXT,
   created_at          TIMESTAMPTZ DEFAULT now()
 );
 
