@@ -120,7 +120,9 @@ export default function TaggerPage() {
       .select()
       .single();
     if (error) { alert(`SAVE FAILED: ${error.message}`); return; }
-    await loadMatches();
+    // Add to matches state immediately — don't wait for async reload
+    // This ensures selectedMatch resolves correctly when selectedMatchId is set
+    setMatches(prev => [data, ...prev]);
     setSelectedMatchId(data.id);
     setShowCreateModal(false);
   };

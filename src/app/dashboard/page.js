@@ -236,19 +236,28 @@ export default function DashboardPage() {
 
   // Player contribution stats
   const playerStats = useMemo(() => {
+    // Build UUID → player_sheet lookup (players have different UUIDs per match)
     const playerMap = Object.fromEntries(teamSheets.map(p => [p.id, p]));
+
     const oppEvents = filteredEvents.filter(e => e.isNextOpponent && e.action_player_id);
-    const byPlayer = {};
+    // Aggregate by player_name so the same player across multiple matches merges
+    const byName = {};
     oppEvents.forEach(ev => {
-      const pid = ev.action_player_id;
-      if (!byPlayer[pid]) byPlayer[pid] = { player: playerMap[pid], shots: 0, goals: 0, key_pass: 0, assist: 0 };
-      if (ev.event_type === "shot")     byPlayer[pid].shots++;
-      if (ev.shot_outcome === "goal")   byPlayer[pid].goals++;
-      if (ev.event_type === "key_pass") byPlayer[pid].key_pass++;
-      if (ev.event_type === "assist")   byPlayer[pid].assist++;
+      const sheet = playerMap[ev.action_player_id];
+      const key = sheet ? sheet.player_name : ev.action_player_id; // fallback to UUID if sheet missing
+      if (!byName[key]) byName[key] = { player: sheet, shots: 0, goals: 0, key_pass: 0, assist: 0 };
+      // Update player sheet reference if missing (may appear in later match)
+      if (!byName[key].player && sheet) byName[key].player = sheet;
+      if (ev.event_type === "shot")     byName[key].shots++;
+      if (ev.shot_outcome === "goal")   byName[key].goals++;
+      if (ev.event_type === "key_pass") byName[key].key_pass++;
+      if (ev.event_type === "assist")   byName[key].assist++;
     });
-    return Object.values(byPlayer).sort((a, b) => (b.shots + b.goals + b.key_pass + b.assist) - (a.shots + a.goals + a.key_pass + a.assist));
+    return Object.values(byName).sort((a, b) =>
+      (b.shots + b.goals + b.key_pass + b.assist) - (a.shots + a.goals + a.key_pass + a.assist)
+    );
   }, [filteredEvents, teamSheets]);
+
 
 
   const handleEventClick = (ev) => {
