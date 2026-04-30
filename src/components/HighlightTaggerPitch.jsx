@@ -7,24 +7,12 @@ export default function HighlightTaggerPitch({
   events = [],
   onEventComplete,
   onEventClick,
-  startPoint: externalStart,
-  endPoint: externalEnd,
-  onClear
 }) {
   const containerRef = useRef(null);
   
   const [isDrawing, setIsDrawing] = useState(false);
   const [startPoint, setStartPoint] = useState(null);
   const [mousePoint, setMousePoint] = useState(null);
-
-  // Sync with external state if needed (e.g. for clearing)
-  useEffect(() => {
-    if (!externalStart) {
-      setStartPoint(null);
-      setMousePoint(null);
-      setIsDrawing(false);
-    }
-  }, [externalStart]);
 
   const getCoords = (e) => {
     const rect = containerRef.current.getBoundingClientRect();
@@ -64,12 +52,30 @@ export default function HighlightTaggerPitch({
   );
 
   return (
-    <div style={{ background: "#fff", border: "1px solid #e5e7eb", borderRadius: 8, overflow: "hidden" }}>
+    <div className="brutal-card" style={{ padding: 0, overflow: "hidden" }}>
+      <div
+        style={{
+          background: "#000",
+          color: "#fff",
+          padding: "4px 8px",
+          fontWeight: 800,
+          fontSize: "0.65rem",
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+        }}
+      >
+        <span>{title}</span>
+        <span style={{ color: "#FACC15", fontSize: "0.55rem" }}>
+          {isDrawing ? "CLICK END LOCATION" : "CLICK START LOCATION"}
+        </span>
+      </div>
+
       <div
         ref={containerRef}
         style={{ 
-          cursor: "crosshair", position: "relative", background: "#f8fafc",
-          aspectRatio: "3/2", borderBottom: "1px solid #e5e7eb"
+          cursor: "crosshair", position: "relative", background: "#2D5A27",
+          aspectRatio: "3/2"
         }}
         onClick={handleClick}
         onMouseMove={handleMouseMove}
@@ -78,70 +84,55 @@ export default function HighlightTaggerPitch({
           viewBox="0 0 120 80"
           width="100%"
           height="100%"
-          style={{ position: "absolute", inset: 0, padding: 10 }}
+          style={{ position: "absolute", inset: 0 }}
           preserveAspectRatio="xMidYMid meet"
         >
-          {/* Pitch outline - Light Gray Style */}
-          <rect x="0" y="0" width="120" height="80" fill="#fff" stroke="#94a3b8" strokeWidth="0.8" />
-          <line x1="60" y1="0" x2="60" y2="80" stroke="#94a3b8" strokeWidth="0.8" />
-          <circle cx="60" cy="40" r="9.15" fill="none" stroke="#94a3b8" strokeWidth="0.8" />
-          
-          {/* Penalty areas */}
-          <rect x="0" y="18" width="18" height="44" fill="none" stroke="#94a3b8" strokeWidth="0.8" />
-          <rect x="102" y="18" width="18" height="44" fill="none" stroke="#94a3b8" strokeWidth="0.8" />
-          <rect x="0" y="30" width="6" height="20" fill="none" stroke="#94a3b8" strokeWidth="0.8" />
-          <rect x="114" y="30" width="6" height="20" fill="none" stroke="#94a3b8" strokeWidth="0.8" />
+          {/* Pitch outline */}
+          <rect x="0" y="0" width="120" height="80" fill="none" stroke="rgba(255,255,255,0.7)" strokeWidth="0.5" />
+          <line x1="60" y1="0" x2="60" y2="80" stroke="rgba(255,255,255,0.7)" strokeWidth="0.5" />
+          <circle cx="60" cy="40" r="9.15" fill="none" stroke="rgba(255,255,255,0.7)" strokeWidth="0.5" />
+          <circle cx="60" cy="40" r="0.5" fill="rgba(255,255,255,0.7)" />
 
-          {/* Render historical events as subtle dots */}
+          {/* Penalty areas */}
+          <rect x="0" y="18" width="18" height="44" fill="none" stroke="rgba(255,255,255,0.7)" strokeWidth="0.5" />
+          <rect x="102" y="18" width="18" height="44" fill="none" stroke="rgba(255,255,255,0.7)" strokeWidth="0.5" />
+
+          {/* Render logged events */}
           {events.map((ev, i) => {
-            const color = ev.team_type === 'focus_team' ? "#22c55e" : "#ef4444";
+            const isPass = ev.event_type !== 'shot' && ev.end_x != null && ev.end_y != null;
+            const color = ev.team_type === 'focus_team' ? "#34D399" : "#F87171";
             return (
-              <circle 
+              <g 
                 key={i} 
-                cx={ev.start_x} cy={ev.start_y} r="1.2" 
-                fill={color} fillOpacity="0.3"
                 onClick={(e) => { e.stopPropagation(); onEventClick && onEventClick(ev); }}
                 style={{ cursor: "pointer" }}
-              />
+              >
+                <circle cx={ev.start_x} cy={ev.start_y} r="1.4" fill={color} stroke="#000" strokeWidth="0.4" />
+                {ev.end_x != null && ev.end_y != null && (
+                  <>
+                    <line x1={ev.start_x} y1={ev.start_y} x2={ev.end_x} y2={ev.end_y} stroke={color} strokeWidth="0.8" strokeDasharray="1,1" />
+                    <circle cx={ev.end_x} cy={ev.end_y} r="0.6" fill={color} />
+                  </>
+                )}
+              </g>
             );
           })}
 
-          {/* Render current active vector */}
-          {(isDrawing || (externalStart && externalEnd)) && (
+          {/* Preview line */}
+          {isDrawing && startPoint && mousePoint && (
             <g>
               <line
-                x1={isDrawing ? startPoint.x : externalStart.x} 
-                y1={isDrawing ? startPoint.y : externalStart.y}
-                x2={isDrawing ? mousePoint.x : externalEnd.x} 
-                y2={isDrawing ? mousePoint.y : externalEnd.y}
-                stroke="#64748b"
+                x1={startPoint.x} y1={startPoint.y}
+                x2={mousePoint.x} y2={mousePoint.y}
+                stroke="#FACC15"
                 strokeWidth="1"
                 strokeDasharray="2,2"
               />
-              <circle 
-                cx={isDrawing ? startPoint.x : externalStart.x} 
-                cy={isDrawing ? startPoint.y : externalStart.y} 
-                r="1.5" fill="#ef4444" 
-              />
-              <circle 
-                cx={isDrawing ? mousePoint.x : externalEnd.x} 
-                cy={isDrawing ? mousePoint.y : externalEnd.y} 
-                r="1.5" fill="#22c55e" 
-              />
+              <circle cx={startPoint.x} cy={startPoint.y} r="1" fill="#FACC15" stroke="#000" strokeWidth="0.2" />
+              <circle cx={mousePoint.x} cy={mousePoint.y} r="0.8" fill="#FACC15" />
             </g>
           )}
         </svg>
-      </div>
-      
-      <div style={{ padding: "8px 12px", display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: "0.65rem", color: "#64748b" }}>
-        <span>
-          {isDrawing ? `Start: ${startPoint.x}, ${startPoint.y}` : 
-           (externalStart && externalEnd) ? `Start: ${externalStart.x}, ${externalStart.y} | End: ${externalEnd.x}, ${externalEnd.y}` :
-           "Click to set start point"}
-        </span>
-        <div style={{ display: "flex", gap: 8 }}>
-          <button onClick={onClear} style={{ color: "#ef4444", fontWeight: 700, border: "1px solid #fee2e2", padding: "2px 8px", borderRadius: 4, background: "#fef2f2" }}>Clear Pitch</button>
-        </div>
       </div>
     </div>
   );
