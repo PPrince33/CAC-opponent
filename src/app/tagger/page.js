@@ -239,6 +239,20 @@ export default function TaggerPage() {
     if (!error) setEvents((prev) => prev.filter((ev) => ev.id !== id));
   };
 
+  // Inline-edit a single field on an existing event
+  const handleUpdateEvent = async (id, field, value) => {
+    const safeValue = (field === 'action_player_id' || field === 'reaction_player_id') 
+      ? (value || null) 
+      : (value === '' ? null : value);
+    const { error } = await supabase
+      .from('highlight_events')
+      .update({ [field]: safeValue })
+      .eq('id', id);
+    if (!error) {
+      setEvents(prev => prev.map(ev => ev.id === id ? { ...ev, [field]: safeValue } : ev));
+    }
+  };
+
   const handleSeek = (ev) => {
     if (!ev || !ev.timestamp) return;
     const parts = ev.timestamp.split(':');
@@ -274,6 +288,8 @@ export default function TaggerPage() {
   }, [events, filterTeam, filterPlayer, filterAction, filterOutcome]);
 
   if (!authChecked) return null;
+
+  const thStyle = { padding: "8px 6px", textAlign: "left", whiteSpace: "nowrap", fontWeight: 800, fontSize: "0.65rem" };
 
   let youtubeId = null;
   let videoLink = selectedMatch?.video_link;
@@ -449,7 +465,7 @@ export default function TaggerPage() {
       {/* BOTTOM: TIMELINE */}
       <div className="brutal-card" style={{ display: "flex", flexDirection: "column", minHeight: 300 }}>
         <div style={{ background: "#000", color: "#fff", padding: "8px 12px", fontWeight: 800, fontSize: "0.75rem", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-          <span>📋 EVENT TIMELINE</span>
+          <span>📋 EVENT TIMELINE ({filteredEvents.length})</span>
           <div style={{ display: "flex", gap: 8 }}>
              <select className="brutal-select" style={{ fontSize: "0.6rem", padding: "2px 8px", background: "#fff", color: "#000" }} value={filterTeam} onChange={e => setFilterTeam(e.target.value)}>
                <option value="all">ALL TEAMS</option>
@@ -463,31 +479,122 @@ export default function TaggerPage() {
              <select className="brutal-select" style={{ fontSize: "0.6rem", padding: "2px 8px", background: "#fff", color: "#000" }} value={filterOutcome} onChange={e => setFilterOutcome(e.target.value)}><option value="all">ALL OUTCOMES</option><option value="goal">GOALS</option><option value="miss">OTHER</option></select>
           </div>
         </div>
-        <div style={{ flex: 1, overflowY: "auto" }}>
-          {filteredEvents.length === 0 ? <p style={{ fontSize: "0.8rem", color: "#666", textAlign: "center", padding: 64 }}>NO MATCHING EVENTS</p> : (
-            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.75rem" }}>
-              <thead style={{ position: "sticky", top: 0, background: "#f0f0f0", borderBottom: "2px solid #000", zIndex: 1 }}><tr style={{ color: "#666", fontWeight: 700 }}><th style={{ padding: "12px 16px", textAlign: "left", width: 80 }}>TIME</th><th style={{ padding: "12px 16px", textAlign: "left", width: 40 }}>T</th><th style={{ padding: "12px 16px", textAlign: "left" }}>PLAYER</th><th style={{ padding: "12px 16px", textAlign: "left" }}>ACTION</th><th style={{ padding: "12px 16px", textAlign: "left" }}>OUTCOME</th><th style={{ padding: "12px 16px", textAlign: "right" }}></th></tr></thead>
-              <tbody>{filteredEvents.map((ev) => { 
-                const player = teamSheet.find(p => p.id === ev.action_player_id); 
-                const isSelected = selectedEventId === ev.id;
-                return (
-                  <tr key={ev.id} onClick={() => handleSeek(ev)} className="timeline-row" style={{ borderBottom: "1px solid #eee", cursor: "pointer", background: isSelected ? "#f0fdf4" : "transparent" }}>
-                    <td style={{ padding: "12px 16px", fontWeight: 800 }}>{ev.timestamp || "0'"}</td>
-                    <td style={{ padding: "12px 16px" }}><div style={{ width: 10, height: 10, borderRadius: "50%", background: ev.action_team === selectedMatch?.away_team ? '#34D399' : '#F87171' }}></div></td>
-                    <td style={{ padding: "12px 16px", fontWeight: 600 }}>{player ? `${player.jersey_number} ${player.player_name.toUpperCase()}` : "—"}</td>
-                    <td style={{ padding: "12px 16px" }}>{ev.event_type.replace("_", " ").toUpperCase()}</td>
-                    <td style={{ padding: "12px 16px", fontWeight: 700, color: ev.shot_outcome === "goal" ? "#34D399" : "#000" }}>{ev.shot_outcome ? ev.shot_outcome.toUpperCase() : "SUCCESSFUL"}</td>
-                    <td style={{ padding: "12px 16px", textAlign: "right" }}><button onClick={(e) => { e.stopPropagation(); handleDeleteEvent(ev.id); }} style={{ color: "#ccc", background: "none", border: "none", cursor: "pointer", fontSize: "1.1rem" }}>✕</button></td>
-                  </tr>
-                ); 
-              })}</tbody>
+        <div style={{ flex: 1, overflowY: "auto", overflowX: "auto" }}>
+          {filteredEvents.length === 0 
+            ? <p style={{ fontSize: "0.8rem", color: "#666", textAlign: "center", padding: 64 }}>NO MATCHING EVENTS</p> 
+            : (
+            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.7rem", minWidth: 900 }}>
+              <thead style={{ position: "sticky", top: 0, background: "#f0f0f0", borderBottom: "2px solid #000", zIndex: 1 }}>
+                <tr style={{ color: "#555", fontWeight: 800 }}>
+                  <th style={thStyle}>TIME</th>
+                  <th style={thStyle}>HALF</th>
+                  <th style={thStyle}>TEAM</th>
+                  <th style={thStyle}>PLAYER</th>
+                  <th style={thStyle}>ACTION</th>
+                  <th style={thStyle}>OUTCOME</th>
+                  <th style={thStyle}>BODY PART</th>
+                  <th style={thStyle}>REACTION PLAYER</th>
+                  <th style={{ ...thStyle, textAlign: "right" }}>DEL</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredEvents.map((ev) => {
+                  const isSelected = selectedEventId === ev.id;
+                  const rowBg = isSelected ? "#f0fdf4" : "transparent";
+                  const s = { padding: "4px 6px" };
+                  return (
+                    <tr key={ev.id} style={{ borderBottom: "1px solid #eee", background: rowBg }} className="timeline-row">
+                      {/* TIME */}
+                      <td style={s}>
+                        <input
+                          className="brutal-input"
+                          style={{ width: 60, fontSize: "0.65rem", padding: "2px 4px" }}
+                          defaultValue={ev.timestamp || ""}
+                          onBlur={e => handleUpdateEvent(ev.id, 'timestamp', e.target.value)}
+                          onClick={() => handleSeek(ev)}
+                        />
+                      </td>
+                      {/* HALF */}
+                      <td style={s}>
+                        <select className="brutal-select" style={{ fontSize: "0.65rem", padding: "2px 4px" }} value={ev.half || "1st"} onChange={e => handleUpdateEvent(ev.id, 'half', e.target.value)}>
+                          <option value="1st">1ST</option>
+                          <option value="2nd">2ND</option>
+                        </select>
+                      </td>
+                      {/* TEAM */}
+                      <td style={s}>
+                        <select className="brutal-select" style={{ fontSize: "0.65rem", padding: "2px 4px" }} value={ev.action_team || ""} onChange={e => handleUpdateEvent(ev.id, 'action_team', e.target.value)}>
+                          <option value="">—</option>
+                          {selectedMatch && <>
+                            <option value={selectedMatch.home_team}>{selectedMatch.home_team}</option>
+                            <option value={selectedMatch.away_team}>{selectedMatch.away_team}</option>
+                          </>}
+                        </select>
+                      </td>
+                      {/* ACTION PLAYER */}
+                      <td style={s}>
+                        <select className="brutal-select" style={{ fontSize: "0.65rem", padding: "2px 4px", maxWidth: 130 }} value={ev.action_player_id || ""} onChange={e => handleUpdateEvent(ev.id, 'action_player_id', e.target.value)}>
+                          <option value="">— PLAYER —</option>
+                          {teamSheet.filter(p => !ev.action_team || p.team_name === ev.action_team).map(p => (
+                            <option key={p.id} value={p.id}>{p.jersey_number} {p.player_name}</option>
+                          ))}
+                        </select>
+                      </td>
+                      {/* ACTION TYPE */}
+                      <td style={s}>
+                        <select className="brutal-select" style={{ fontSize: "0.65rem", padding: "2px 4px" }} value={ev.event_type} onChange={e => handleUpdateEvent(ev.id, 'event_type', e.target.value)}>
+                          <option value="shot">SHOT</option>
+                          <option value="key_pass">KEY PASS</option>
+                          <option value="assist">ASSIST</option>
+                        </select>
+                      </td>
+                      {/* OUTCOME */}
+                      <td style={s}>
+                        <select className="brutal-select" style={{ fontSize: "0.65rem", padding: "2px 4px", color: ev.shot_outcome === 'goal' ? '#16a34a' : 'inherit' }} value={ev.shot_outcome || ""} onChange={e => handleUpdateEvent(ev.id, 'shot_outcome', e.target.value || null)}>
+                          <option value="">—</option>
+                          <option value="goal">GOAL</option>
+                          <option value="target">ON TARGET</option>
+                          <option value="blocked">BLOCKED</option>
+                          <option value="miss">MISS</option>
+                        </select>
+                      </td>
+                      {/* BODY PART */}
+                      <td style={s}>
+                        <select className="brutal-select" style={{ fontSize: "0.65rem", padding: "2px 4px" }} value={ev.body_part || ""} onChange={e => handleUpdateEvent(ev.id, 'body_part', e.target.value || null)}>
+                          <option value="">—</option>
+                          <option value="right_foot">RIGHT FOOT</option>
+                          <option value="left_foot">LEFT FOOT</option>
+                          <option value="head">HEAD</option>
+                        </select>
+                      </td>
+                      {/* REACTION PLAYER */}
+                      <td style={s}>
+                        <select className="brutal-select" style={{ fontSize: "0.65rem", padding: "2px 4px", maxWidth: 130 }} value={ev.reaction_player_id || ""} onChange={e => handleUpdateEvent(ev.id, 'reaction_player_id', e.target.value)}>
+                          <option value="">— GK / TARGET —</option>
+                          {teamSheet.map(p => (
+                            <option key={p.id} value={p.id}>{p.jersey_number} {p.player_name} ({p.team_name?.split(' ')[0]})</option>
+                          ))}
+                        </select>
+                      </td>
+                      {/* DELETE */}
+                      <td style={{ ...s, textAlign: "right" }}>
+                        <button onClick={() => handleDeleteEvent(ev.id)} style={{ color: "#ef4444", background: "none", border: "none", cursor: "pointer", fontSize: "1rem", fontWeight: 900 }}>✕</button>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
             </table>
           )}
         </div>
       </div>
 
       {showCreateModal && <MatchModal onSave={handleCreateMatch} onCancel={() => setShowCreateModal(false)} />}
-      <style jsx>{`.timeline-row:hover { background: #f0fdf4; }`}</style>
+      <style jsx>{`
+        .timeline-row:hover { background: #f9fffe !important; }
+        .timeline-row select, .timeline-row input { background: transparent; }
+        .timeline-row:hover select, .timeline-row:hover input { background: #fff; }
+      `}</style>
     </div>
   );
 }
