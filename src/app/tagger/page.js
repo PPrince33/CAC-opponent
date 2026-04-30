@@ -113,6 +113,19 @@ export default function TaggerPage() {
     loadMatches();
   }, []);
 
+  const handleCreateMatch = async (formData) => {
+    const { data, error } = await supabase
+      .from("opp_matches")
+      .insert([formData])
+      .select()
+      .single();
+    if (error) { alert(`SAVE FAILED: ${error.message}`); return; }
+    await loadMatches();
+    setSelectedMatchId(data.id);
+    setShowCreateModal(false);
+  };
+
+
   useEffect(() => {
     if (!selectedMatchId) {
       setEvents([]);
