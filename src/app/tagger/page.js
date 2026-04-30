@@ -228,6 +228,7 @@ export default function TaggerPage() {
       // normalizeHighlightEventV2 flips non-scouted teams to R2L.
       const normalized = (rawEvents || []).map(ev => {
         const norm = normalizeHighlightEventV2(ev, scoutedTeam);
+        const isScoutedTeam = ev.action_team === scoutedTeam;
         return {
           source_event_id:  ev.id,
           match_id:         ev.match_id,
@@ -235,6 +236,7 @@ export default function TaggerPage() {
           timestamp:        ev.timestamp,
           event_type:       ev.event_type,
           action_team:      ev.action_team,
+          direction:        isScoutedTeam ? 'L2R' : 'R2L', // scouted team = L2R, opposition = R2L
           start_x:          norm.start_x,
           start_y:          norm.start_y,
           end_x:            norm.end_x,

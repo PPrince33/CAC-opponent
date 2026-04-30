@@ -234,10 +234,11 @@ CREATE TABLE IF NOT EXISTS normalized_highlight_events (
   id                UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   source_event_id   UUID REFERENCES highlight_events(id) ON DELETE CASCADE,
   match_id          UUID NOT NULL REFERENCES opp_matches(id) ON DELETE CASCADE,
-  opponent_team     TEXT,
+  opponent_team     TEXT,                        -- the scouted team (next opponent)
+  action_team       TEXT,                        -- who performed the action
+  direction         TEXT DEFAULT 'L2R',          -- L2R = scouted team, R2L = opposition
   timestamp         TEXT,
   event_type        TEXT,
-  team_type         TEXT,
   start_x           FLOAT,
   start_y           FLOAT,
   end_x             FLOAT,
