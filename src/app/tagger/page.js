@@ -48,6 +48,7 @@ export default function TaggerPage() {
     const { data } = await supabase
       .from("opp_matches")
       .select("*")
+      .eq("hilight", false)
       .order("created_at", { ascending: false });
     setMatches(data || []);
   };

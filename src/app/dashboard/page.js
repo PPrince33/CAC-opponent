@@ -2,17 +2,14 @@
 
 import { useState, useEffect, useMemo } from "react";
 import { supabase } from "@/lib/supabase";
-import { normalizeEvents, normalizeHighlightEvents } from "@/lib/normalize";
+import { normalizeEvents } from "@/lib/normalize";
 import GridPitch from "@/components/GridPitch";
 import CoordinatePitch from "@/components/CoordinatePitch";
-import DangerPitch from "@/components/DangerPitch";
 import FilterBar from "@/components/FilterBar";
 
 export default function DashboardPage() {
   const [matches, setMatches] = useState([]);
   const [allEvents, setAllEvents] = useState([]);
-  const [highlightEvents, setHighlightEvents] = useState([]);
-  const [teamSheets, setTeamSheets] = useState([]);
   const [selectedTeam, setSelectedTeam] = useState("");
   const [selectedMatchIds, setSelectedMatchIds] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -23,6 +20,7 @@ export default function DashboardPage() {
       const { data } = await supabase
         .from("opp_matches")
         .select("*")
+        .eq("hilight", false)
         .order("match_date", { ascending: false });
       setMatches(data || []);
       setLoading(false);
@@ -67,19 +65,6 @@ export default function DashboardPage() {
         .in("match_id", selectedMatchIds)
         .order("created_at", { ascending: true });
       setAllEvents(data || []);
-
-      const { data: hlData } = await supabase
-        .from("highlight_events")
-        .select("*")
-        .in("match_id", selectedMatchIds)
-        .order("created_at", { ascending: true });
-      setHighlightEvents(hlData || []);
-
-      const { data: tsData } = await supabase
-        .from("team_sheets")
-        .select("*")
-        .in("match_id", selectedMatchIds);
-      setTeamSheets(tsData || []);
     })();
   }, [selectedMatchIds]);
 
@@ -105,17 +90,7 @@ export default function DashboardPage() {
     return result;
   }, [allEvents, selectedTeam, matches]);
 
-  const normalizedHighlights = useMemo(() => {
-    if (!selectedTeam) return [];
-    const result = [];
-    highlightEvents.forEach((ev) => {
-      const match = matches.find((m) => m.id === ev.match_id);
-      if (!match) return;
-      const normalized = normalizeHighlightEvents([ev], selectedTeam, match);
-      result.push(...normalized);
-    });
-    return result;
-  }, [highlightEvents, selectedTeam, matches]);
+
 
   // ─── Categorize events ───
   const gainEvents = normalizedEvents.filter((e) => e.event_type === "gain_ball");
@@ -123,8 +98,7 @@ export default function DashboardPage() {
   const shotTakenEvents = normalizedEvents.filter((e) => e.event_type === "shot_taken");
   const shotConcededEvents = normalizedEvents.filter((e) => e.event_type === "shot_conceded");
 
-  const dangerCreated = normalizedHighlights.filter(e => e.team_type === "focus_team");
-  const dangerConceded = normalizedHighlights.filter(e => e.team_type === "opponent");
+
 
   // ─── Stats ───
   const goals = shotTakenEvents.filter((e) => e.shot_outcome === "goal").length;
@@ -237,17 +211,7 @@ export default function DashboardPage() {
                 </div>
               </div>
 
-              {/* Highlight Maps (Danger Created / Conceded) */}
-              <DangerPitch
-                title={`⚔️ ${selectedTeam} — DANGER CREATED`}
-                events={dangerCreated}
-                teamSheet={teamSheets}
-              />
-              <DangerPitch
-                title={`🛡️ ${selectedTeam} — DANGER CONCEDED`}
-                events={dangerConceded}
-                teamSheet={teamSheets}
-              />
+
             </div>
           </>
         )}

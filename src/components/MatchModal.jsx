@@ -51,6 +51,15 @@ export default function MatchModal({ initialData, onSave, onCancel }) {
             <label style={{ fontSize: "0.7rem", fontWeight: 700, marginBottom: 4, display: "block" }}>VIDEO LINK (YOUTUBE / MP4)</label>
             <input className="brutal-input" style={{ width: "100%" }} value={form.video_link || ""} onChange={(e) => update("video_link", e.target.value)} placeholder="https://..." />
           </div>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 4 }}>
+            <input 
+              type="checkbox" 
+              checked={form.hilight || false} 
+              onChange={(e) => update("hilight", e.target.checked)} 
+              style={{ width: 16, height: 16, cursor: "pointer" }} 
+            />
+            <label style={{ fontSize: "0.8rem", fontWeight: 800 }}>IS THIS A HIGHLIGHT MATCH?</label>
+          </div>
           <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
             <button type="submit" className="brutal-btn" style={{ background: "#34D399", color: "#000", flex: 1 }}>
               {isEdit ? "✓ SAVE CHANGES" : "✓ CREATE"}

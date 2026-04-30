@@ -16,6 +16,7 @@ CREATE TABLE IF NOT EXISTS opp_matches (
   score_home    INT DEFAULT 0,
   score_away    INT DEFAULT 0,
   video_link    TEXT,
+  hilight       BOOLEAN NOT NULL DEFAULT FALSE,
   created_at    TIMESTAMPTZ DEFAULT now()
 );
 

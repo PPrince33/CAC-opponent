@@ -25,7 +25,8 @@ export default function RootLayout({ children }) {
   const navLinks = [
     { href: "/tagger", label: "⚡ Tagger" },
     { href: "/dashboard", label: "📊 Dashboard" },
-    { href: "/highlights-tagger", label: "✨ Highlights" },
+    { href: "/highlights-tagger", label: "✨ Highlights Tagger" },
+    { href: "/highlights-dashboard", label: "🛡️ Highlights Dashboard" },
   ];
 
   return (

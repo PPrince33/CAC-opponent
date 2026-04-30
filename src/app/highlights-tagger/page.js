@@ -45,6 +45,7 @@ export default function HighlightsTaggerPage() {
       const { data } = await supabase
         .from("opp_matches")
         .select("*")
+        .eq("hilight", true)
         .order("created_at", { ascending: false });
       setMatches(data || []);
     };
