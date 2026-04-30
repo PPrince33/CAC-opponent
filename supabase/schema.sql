@@ -48,11 +48,29 @@ CREATE INDEX IF NOT EXISTS idx_opp_raw_events_match ON opp_raw_events(match_id);
 ALTER TABLE opp_matches ENABLE ROW LEVEL SECURITY;
 ALTER TABLE opp_raw_events ENABLE ROW LEVEL SECURITY;
 
+-- opp_matches: Drop existing policies
+DROP POLICY IF EXISTS "opp_matches_select_open" ON opp_matches;
+DROP POLICY IF EXISTS "opp_matches_insert_open" ON opp_matches;
+DROP POLICY IF EXISTS "opp_matches_update_open" ON opp_matches;
+DROP POLICY IF EXISTS "opp_matches_delete_open" ON opp_matches;
+DROP POLICY IF EXISTS "opp_matches_insert_auth" ON opp_matches;
+DROP POLICY IF EXISTS "opp_matches_update_auth" ON opp_matches;
+DROP POLICY IF EXISTS "opp_matches_delete_auth" ON opp_matches;
+
 -- opp_matches: SELECT open, but mutations require auth
 CREATE POLICY "opp_matches_select_open" ON opp_matches FOR SELECT USING (true);
 CREATE POLICY "opp_matches_insert_auth" ON opp_matches FOR INSERT WITH CHECK (auth.uid() IS NOT NULL);
 CREATE POLICY "opp_matches_update_auth" ON opp_matches FOR UPDATE USING (auth.uid() IS NOT NULL);
 CREATE POLICY "opp_matches_delete_auth" ON opp_matches FOR DELETE USING (auth.uid() IS NOT NULL);
+
+-- opp_raw_events: Drop existing policies
+DROP POLICY IF EXISTS "opp_raw_events_select_open" ON opp_raw_events;
+DROP POLICY IF EXISTS "opp_raw_events_insert_open" ON opp_raw_events;
+DROP POLICY IF EXISTS "opp_raw_events_update_open" ON opp_raw_events;
+DROP POLICY IF EXISTS "opp_raw_events_delete_open" ON opp_raw_events;
+DROP POLICY IF EXISTS "opp_raw_events_insert_auth" ON opp_raw_events;
+DROP POLICY IF EXISTS "opp_raw_events_update_auth" ON opp_raw_events;
+DROP POLICY IF EXISTS "opp_raw_events_delete_auth" ON opp_raw_events;
 
 -- opp_raw_events: SELECT open, but mutations require auth
 CREATE POLICY "opp_raw_events_select_open" ON opp_raw_events FOR SELECT USING (true);
