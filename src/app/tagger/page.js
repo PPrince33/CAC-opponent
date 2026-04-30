@@ -384,22 +384,20 @@ export default function TaggerPage() {
                     <option value="key_pass">KEY PASS</option>
                     <option value="assist">ASSIST</option>
                   </select>
-                  {tagForm.event_type === "shot" ? (
-                    <select className="brutal-select" style={{ fontSize: "0.65rem", padding: "4px" }} value={tagForm.shot_outcome || ""} onChange={e => setTagForm({...tagForm, shot_outcome: e.target.value || null})}>
-                      <option value="">— OUTCOME —</option>
-                      <option value="goal">GOAL</option>
-                      <option value="target">ON TARGET</option>
-                      <option value="blocked">BLOCKED</option>
-                      <option value="miss">MISS</option>
-                    </select>
-                  ) : (
-                    <select className="brutal-select" style={{ fontSize: "0.65rem", padding: "4px" }} value={tagForm.reaction_player_id} onChange={e => setTagForm({...tagForm, reaction_player_id: e.target.value})}>
-                      <option value="">— TARGET —</option>
-                      {teamSheet
-                        .filter(p => !tagForm.action_team || p.team_name === tagForm.action_team)
-                        .map(p => (<option key={p.id} value={p.id}>{p.jersey_number} {p.player_name.toUpperCase()}</option>))}
-                    </select>
-                  )}
+                  <select className="brutal-select" style={{ fontSize: "0.65rem", padding: "4px" }} value={tagForm.shot_outcome || ""} onChange={e => setTagForm({...tagForm, shot_outcome: e.target.value || null})}>
+                    <option value="">— OUTCOME —</option>
+                    <option value="goal">GOAL</option>
+                    <option value="target">ON TARGET</option>
+                    <option value="blocked">BLOCKED</option>
+                    <option value="miss">MISS</option>
+                  </select>
+                </div>
+                {/* Reaction player — always available (GK for shots, receiver for passes) */}
+                <div style={{ marginTop: 6 }}>
+                  <select className="brutal-select" style={{ fontSize: "0.65rem", padding: "4px", width: "100%" }} value={tagForm.reaction_player_id} onChange={e => setTagForm({...tagForm, reaction_player_id: e.target.value})}>
+                    <option value="">{tagForm.event_type === "shot" ? "— GOALKEEPER / BLOCKER —" : "— TARGET PLAYER —"}</option>
+                    {teamSheet.map(p => (<option key={p.id} value={p.id}>{p.jersey_number} {p.player_name.toUpperCase()} ({p.team_name})</option>))}
+                  </select>
                 </div>
               </div>
 
