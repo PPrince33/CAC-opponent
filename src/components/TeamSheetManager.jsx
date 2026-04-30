@@ -118,70 +118,66 @@ export default function TeamSheetManager({ matchId }) {
   };
 
   return (
-    <div className="brutal-card" style={{ padding: 12 }}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
-        <div style={{ background: "#000", color: "#fff", padding: "6px 12px", fontWeight: 800, fontSize: "0.75rem" }}>
+    <div className="brutal-card" style={{ padding: 8, height: "100%", display: "flex", flexDirection: "column" }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+        <div style={{ background: "#000", color: "#fff", padding: "4px 8px", fontWeight: 800, fontSize: "0.65rem" }}>
           📋 TEAM SHEET
         </div>
-        <div style={{ display: "flex", gap: 4 }}>
+        <div style={{ display: "flex", gap: 2 }}>
           <button 
             onClick={() => setMode("single")}
             className="brutal-btn" 
-            style={{ fontSize: "0.6rem", padding: "4px 8px", background: mode === "single" ? "#FACC15" : "#fff" }}
+            style={{ fontSize: "0.55rem", padding: "2px 6px", background: mode === "single" ? "#FACC15" : "#fff" }}
           >
-            SINGLE
+            SGL
           </button>
           <button 
             onClick={() => setMode("bulk")}
             className="brutal-btn" 
-            style={{ fontSize: "0.6rem", padding: "4px 8px", background: mode === "bulk" ? "#FACC15" : "#fff" }}
+            style={{ fontSize: "0.55rem", padding: "2px 6px", background: mode === "bulk" ? "#FACC15" : "#fff" }}
           >
-            BULK ADD
+            BLK
           </button>
         </div>
       </div>
       
       {/* ADD PLAYER FORM */}
       {mode === "single" ? (
-        <form onSubmit={handleAdd} style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 16 }}>
+        <form onSubmit={handleAdd} style={{ display: "flex", gap: 4, flexWrap: "wrap", marginBottom: 8 }}>
           <input 
-            className="brutal-input" style={{ flex: 1, minWidth: 120 }} placeholder="Team Name" 
+            className="brutal-input" style={{ flex: 1, minWidth: 80, fontSize: "0.65rem", padding: "4px" }} placeholder="Team" 
             value={form.team_name} onChange={(e) => setForm({...form, team_name: e.target.value})} required 
           />
           <input 
-            className="brutal-input" style={{ width: 60 }} placeholder="#" 
+            className="brutal-input" style={{ width: 40, fontSize: "0.65rem", padding: "4px" }} placeholder="#" 
             value={form.jersey_number} onChange={(e) => setForm({...form, jersey_number: e.target.value})} 
           />
           <input 
-            className="brutal-input" style={{ flex: 2, minWidth: 150 }} placeholder="Player Name" 
+            className="brutal-input" style={{ flex: 2, minWidth: 100, fontSize: "0.65rem", padding: "4px" }} placeholder="Name" 
             value={form.player_name} onChange={(e) => setForm({...form, player_name: e.target.value})} required 
           />
-          <input 
-            className="brutal-input" style={{ flex: 1, minWidth: 100 }} placeholder="Pos" 
-            value={form.position} onChange={(e) => setForm({...form, position: e.target.value})} 
-          />
-          <button type="submit" className="brutal-btn" style={{ background: "#2DD4BF" }}>+ ADD</button>
+          <button type="submit" className="brutal-btn" style={{ background: "#2DD4BF", fontSize: "0.65rem", padding: "4px 8px" }}>+</button>
         </form>
       ) : (
-        <div style={{ marginBottom: 16 }}>
-          <div style={{ display: "flex", gap: 8, marginBottom: 8 }}>
+        <div style={{ marginBottom: 8 }}>
+          <div style={{ display: "flex", gap: 4, marginBottom: 4 }}>
             <input 
-              className="brutal-input" style={{ flex: 1 }} placeholder="Team Name" 
+              className="brutal-input" style={{ flex: 1, fontSize: "0.65rem", padding: "4px" }} placeholder="Team" 
               value={form.team_name} onChange={(e) => setForm({...form, team_name: e.target.value})} required 
             />
             <button 
               onClick={handleBulkAdd} 
               className="brutal-btn" 
-              style={{ background: "#2DD4BF" }}
+              style={{ background: "#2DD4BF", fontSize: "0.65rem", padding: "4px 8px" }}
               disabled={loading}
             >
-              {loading ? "SAVING..." : "PROCESS BULK"}
+              {loading ? "..." : "BLK"}
             </button>
           </div>
           <textarea 
             className="brutal-input" 
-            style={{ width: "100%", height: 120, fontSize: "0.8rem", fontFamily: "monospace" }} 
-            placeholder="Paste players here (one per line)&#10;Format: Jersey# Name Position&#10;Example:&#10;10 Messi FW&#10;7 Ronaldo FW"
+            style={{ width: "100%", height: 60, fontSize: "0.6rem", fontFamily: "monospace", padding: "4px" }} 
+            placeholder="Jersey# Name Position"
             value={bulkText}
             onChange={(e) => setBulkText(e.target.value)}
           />
@@ -189,28 +185,26 @@ export default function TeamSheetManager({ matchId }) {
       )}
 
       {/* PLAYER LIST */}
-      <div style={{ maxHeight: 250, overflowY: "auto", border: "2px solid #000" }}>
+      <div style={{ flex: 1, maxHeight: 150, overflowY: "auto", border: "2px solid #000" }}>
         {players.length === 0 ? (
-          <div style={{ padding: 16, textAlign: "center", fontSize: "0.8rem", color: "#666" }}>NO PLAYERS ADDED</div>
+          <div style={{ padding: 8, textAlign: "center", fontSize: "0.65rem", color: "#666" }}>EMPTY</div>
         ) : (
-          <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.8rem" }}>
-            <thead style={{ background: "#f0f0f0", borderBottom: "2px solid #000" }}>
+          <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.65rem" }}>
+            <thead style={{ background: "#f0f0f0", borderBottom: "2px solid #000", position: "sticky", top: 0 }}>
               <tr>
-                <th style={{ padding: 6, textAlign: "left" }}>TEAM</th>
-                <th style={{ padding: 6, textAlign: "left" }}>#</th>
-                <th style={{ padding: 6, textAlign: "left" }}>NAME</th>
-                <th style={{ padding: 6, textAlign: "left" }}>POS</th>
-                <th style={{ padding: 6 }}></th>
+                <th style={{ padding: 4, textAlign: "left" }}>T</th>
+                <th style={{ padding: 4, textAlign: "left" }}>#</th>
+                <th style={{ padding: 4, textAlign: "left" }}>NAME</th>
+                <th style={{ padding: 4 }}></th>
               </tr>
             </thead>
             <tbody>
               {players.map((p) => (
                 <tr key={p.id} style={{ borderBottom: "1px solid #ccc" }}>
-                  <td style={{ padding: "6px 8px" }}>{p.team_name}</td>
-                  <td style={{ padding: "6px 8px" }}>{p.jersey_number}</td>
-                  <td style={{ padding: "6px 8px", fontWeight: 600 }}>{p.player_name}</td>
-                  <td style={{ padding: "6px 8px" }}>{p.position}</td>
-                  <td style={{ padding: "6px 8px", textAlign: "right" }}>
+                  <td style={{ padding: "4px" }}>{p.team_name.substring(0, 3)}</td>
+                  <td style={{ padding: "4px" }}>{p.jersey_number}</td>
+                  <td style={{ padding: "4px", fontWeight: 600 }}>{p.player_name}</td>
+                  <td style={{ padding: "4px", textAlign: "right" }}>
                     <button onClick={() => handleDelete(p.id)} style={{ color: "red", fontWeight: 800 }}>✕</button>
                   </td>
                 </tr>

@@ -69,9 +69,9 @@ export default function HighlightTaggerPitch({
         style={{
           background: "#000",
           color: "#fff",
-          padding: "6px 12px",
+          padding: "4px 8px",
           fontWeight: 800,
-          fontSize: "0.75rem",
+          fontSize: "0.65rem",
           borderBottom: "none",
           border: "3px solid #000",
           display: "flex",
@@ -80,8 +80,8 @@ export default function HighlightTaggerPitch({
         }}
       >
         <span>{title}</span>
-        <span style={{ color: "#FACC15" }}>
-          {tool === "shot" ? "CLICK TO LOG SHOT" : isDrawing ? "CLICK TO SET END POINT" : "CLICK TO SET START POINT"}
+        <span style={{ color: "#FACC15", fontSize: "0.55rem" }}>
+          {tool === "shot" ? "LOG SHOT" : isDrawing ? "SET END" : "SET START"}
         </span>
       </div>
 

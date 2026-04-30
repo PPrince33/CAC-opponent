@@ -65,7 +65,6 @@ export default function TaggerPage() {
   // ─── Create match ───
   const handleCreateMatch = async (form) => {
     setLoading(true);
-    // Force hilight true for all matches now
     const { data, error } = await supabase
       .from("opp_matches")
       .insert([{ ...form, hilight: true }])
@@ -200,7 +199,7 @@ export default function TaggerPage() {
       if (filterAction !== "all" && ev.event_type !== filterAction) return false;
       if (filterOutcome !== "all") {
         if (filterOutcome === "goal" && ev.shot_outcome !== "goal") return false;
-        if (filterOutcome === "miss" && ev.shot_outcome === "goal") return false; // Simple logic
+        if (filterOutcome === "miss" && ev.shot_outcome === "goal") return false;
       }
       return true;
     });
@@ -217,7 +216,7 @@ export default function TaggerPage() {
   }
 
   return (
-    <div style={{ padding: 16, maxWidth: 1400, margin: "0 auto", paddingBottom: 120 }}>
+    <div style={{ padding: 16, maxWidth: "1600px", margin: "0 auto", paddingBottom: 120 }}>
       {/* ─── TOP CONTROL BAR ─── */}
       <div style={{ background: "#34D399", border: "3px solid #000", boxShadow: "4px 4px 0px 0px rgba(0,0,0,1)", padding: "12px 16px", display: "flex", flexWrap: "wrap", gap: 12, alignItems: "center", marginBottom: 16 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
@@ -257,12 +256,15 @@ export default function TaggerPage() {
         </div>
       </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 400px", gap: 16 }}>
-        {/* LEFT COLUMN: Video & Tagger */}
+      {/* ─── MAIN LAYOUT ─── */}
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 380px", gap: 16, marginBottom: 16 }}>
+        
+        {/* LEFT: BIG VIDEO PLAYER */}
         <div>
-          <div className="brutal-card" style={{ overflow: "hidden", marginBottom: 16 }}>
-            <div style={{ background: "#000", color: "#fff", padding: "8px 12px", fontWeight: 800, fontSize: "0.75rem" }}>
-              📹 VIDEO PLAYER
+          <div className="brutal-card" style={{ overflow: "hidden" }}>
+            <div style={{ background: "#000", color: "#fff", padding: "8px 12px", fontWeight: 800, fontSize: "0.75rem", display: "flex", justifyContent: "space-between" }}>
+              <span>📹 VIDEO PLAYER</span>
+              {selectedMatch && <span style={{ color: "#FACC15" }}>{selectedMatch.home_team} VS {selectedMatch.away_team}</span>}
             </div>
             <div style={{ aspectRatio: "16/9", background: "#111", display: "flex", alignItems: "center", justifyContent: "center" }}>
               {!selectedMatch ? (
@@ -281,108 +283,113 @@ export default function TaggerPage() {
               )}
             </div>
           </div>
-          
-          {/* Tool Selector */}
-          <div style={{ display: "flex", gap: 8, marginBottom: 8 }}>
-            <button onClick={() => setTool("shot")} className="brutal-btn" style={{ flex: 1, background: tool === "shot" ? "#000" : "#fff", color: tool === "shot" ? "#34D399" : "#000" }}>
-              🎯 SHOT TOOL (1 Click)
-            </button>
-            <button onClick={() => setTool("pass")} className="brutal-btn" style={{ flex: 1, background: tool === "pass" ? "#000" : "#fff", color: tool === "pass" ? "#FACC15" : "#000" }}>
-              ↗️ PASS TOOL (2 Clicks)
-            </button>
-          </div>
-
-          <HighlightTaggerPitch 
-            events={events}
-            tool={tool}
-            onEventComplete={handlePitchInteraction}
-            onEventClick={(ev) => handleSeek(ev.timestamp)}
-          />
         </div>
 
-        {/* RIGHT COLUMN: Team Sheet & Event Timeline */}
+        {/* RIGHT: SIDEBAR (PITCH & TEAM SHEET) */}
         <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-          {selectedMatch && <TeamSheetManager matchId={selectedMatchId} />}
-
-          {/* Event Log / Timeline */}
-          <div className="brutal-card" style={{ flex: 1, display: "flex", flexDirection: "column", minHeight: 400 }}>
-            <div style={{ background: "#000", color: "#fff", padding: "8px 12px", fontWeight: 800, fontSize: "0.75rem" }}>
-              📋 EVENT TIMELINE
+          
+          {/* Small Pitch */}
+          <div className="brutal-card" style={{ padding: 8 }}>
+             {/* Tool Selector */}
+            <div style={{ display: "flex", gap: 4, marginBottom: 8 }}>
+              <button onClick={() => setTool("shot")} className="brutal-btn" style={{ flex: 1, fontSize: "0.65rem", padding: "4px", background: tool === "shot" ? "#000" : "#fff", color: tool === "shot" ? "#34D399" : "#000" }}>
+                🎯 SHOT
+              </button>
+              <button onClick={() => setTool("pass")} className="brutal-btn" style={{ flex: 1, fontSize: "0.65rem", padding: "4px", background: tool === "pass" ? "#000" : "#fff", color: tool === "pass" ? "#FACC15" : "#000" }}>
+                ↗️ PASS
+              </button>
             </div>
-            
-            {/* TIMELINE FILTERS */}
-            <div style={{ padding: 8, background: "#f9f9f9", borderBottom: "2px solid #000", display: "grid", gridTemplateColumns: "1fr 1fr", gap: 4 }}>
-              <select className="brutal-select" style={{ fontSize: "0.6rem", padding: "2px 4px" }} value={filterTeam} onChange={e => setFilterTeam(e.target.value)}>
-                <option value="all">ALL TEAMS</option>
-                <option value="focus_team">HOME</option>
-                <option value="opponent">AWAY</option>
-              </select>
-              <select className="brutal-select" style={{ fontSize: "0.6rem", padding: "2px 4px" }} value={filterPlayer} onChange={e => setFilterPlayer(e.target.value)}>
-                <option value="all">ALL PLAYERS</option>
-                {teamSheet.map(p => (
-                  <option key={p.id} value={p.id}>{p.jersey_number} {p.player_name}</option>
-                ))}
-              </select>
-              <select className="brutal-select" style={{ fontSize: "0.6rem", padding: "2px 4px" }} value={filterAction} onChange={e => setFilterAction(e.target.value)}>
-                <option value="all">ALL ACTIONS</option>
-                <option value="shot">SHOTS</option>
-                <option value="key_pass">KEY PASSES</option>
-                <option value="assist">ASSISTS</option>
-              </select>
-              <select className="brutal-select" style={{ fontSize: "0.6rem", padding: "2px 4px" }} value={filterOutcome} onChange={e => setFilterOutcome(e.target.value)}>
-                <option value="all">ALL OUTCOMES</option>
-                <option value="goal">GOALS</option>
-                <option value="miss">OTHER</option>
-              </select>
-            </div>
-
-            <div style={{ flex: 1, overflowY: "auto", padding: 0 }}>
-              {filteredEvents.length === 0 ? (
-                <p style={{ fontSize: "0.8rem", color: "#666", textAlign: "center", padding: 32 }}>NO MATCHING EVENTS</p>
-              ) : (
-                <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.7rem" }}>
-                  <thead style={{ position: "sticky", top: 0, background: "#f0f0f0", borderBottom: "2px solid #000", zIndex: 1 }}>
-                    <tr style={{ color: "#666", fontWeight: 700 }}>
-                      <th style={{ padding: "8px 4px", textAlign: "left", width: 40 }}>TIME</th>
-                      <th style={{ padding: "8px 4px", textAlign: "left", width: 20 }}>T</th>
-                      <th style={{ padding: "8px 4px", textAlign: "left" }}>PLAYER</th>
-                      <th style={{ padding: "8px 4px", textAlign: "left" }}>ACTION</th>
-                      <th style={{ padding: "8px 4px", textAlign: "left" }}>OUT</th>
-                      <th style={{ padding: "8px 4px" }}></th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {filteredEvents.map((ev) => {
-                      const player = teamSheet.find(p => p.id === ev.action_player_id);
-                      return (
-                        <tr 
-                          key={ev.id} 
-                          onClick={() => handleSeek(ev.timestamp)}
-                          className="timeline-row"
-                          style={{ borderBottom: "1px solid #eee", cursor: "pointer" }}
-                        >
-                          <td style={{ padding: "8px 4px", fontWeight: 800 }}>{ev.timestamp || "0'"}</td>
-                          <td style={{ padding: "8px 4px" }}>
-                            <div style={{ width: 8, height: 8, borderRadius: "50%", background: ev.team_type === 'focus_team' ? '#34D399' : '#F87171' }}></div>
-                          </td>
-                          <td style={{ padding: "8px 4px", fontWeight: 600 }}>
-                            {player ? `${player.jersey_number} ${player.player_name.toUpperCase()}` : "—"}
-                          </td>
-                          <td style={{ padding: "8px 4px" }}>{ev.event_type.replace("_", " ").toUpperCase()}</td>
-                          <td style={{ padding: "8px 4px", fontWeight: 700, color: ev.shot_outcome === "goal" ? "#34D399" : "#000" }}>
-                            {ev.shot_outcome ? ev.shot_outcome.toUpperCase() : "SUCCESSFUL"}
-                          </td>
-                          <td style={{ padding: "8px 4px", textAlign: "right" }}>
-                            <button onClick={(e) => { e.stopPropagation(); handleDeleteEvent(ev.id); }} style={{ color: "#ccc", background: "none", border: "none", cursor: "pointer" }}>✕</button>
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              )}
-            </div>
+            <HighlightTaggerPitch 
+              events={events}
+              tool={tool}
+              onEventComplete={handlePitchInteraction}
+              onEventClick={(ev) => handleSeek(ev.timestamp)}
+            />
           </div>
+
+          {/* Team Sheet */}
+          <div style={{ flex: 1 }}>
+            {selectedMatch && <TeamSheetManager matchId={selectedMatchId} />}
+          </div>
+
+        </div>
+      </div>
+
+      {/* ─── BOTTOM: EVENT LOG (FULL WIDTH) ─── */}
+      <div className="brutal-card" style={{ display: "flex", flexDirection: "column", minHeight: 300 }}>
+        <div style={{ background: "#000", color: "#fff", padding: "8px 12px", fontWeight: 800, fontSize: "0.75rem", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <span>📋 EVENT TIMELINE</span>
+          <div style={{ display: "flex", gap: 8 }}>
+             <select className="brutal-select" style={{ fontSize: "0.6rem", padding: "2px 8px", background: "#fff", color: "#000" }} value={filterTeam} onChange={e => setFilterTeam(e.target.value)}>
+              <option value="all">ALL TEAMS</option>
+              <option value="focus_team">HOME</option>
+              <option value="opponent">AWAY</option>
+            </select>
+            <select className="brutal-select" style={{ fontSize: "0.6rem", padding: "2px 8px", background: "#fff", color: "#000" }} value={filterPlayer} onChange={e => setFilterPlayer(e.target.value)}>
+              <option value="all">ALL PLAYERS</option>
+              {teamSheet.map(p => (
+                <option key={p.id} value={p.id}>{p.jersey_number} {p.player_name}</option>
+              ))}
+            </select>
+            <select className="brutal-select" style={{ fontSize: "0.6rem", padding: "2px 8px", background: "#fff", color: "#000" }} value={filterAction} onChange={e => setFilterAction(e.target.value)}>
+              <option value="all">ALL ACTIONS</option>
+              <option value="shot">SHOTS</option>
+              <option value="key_pass">KEY PASSES</option>
+              <option value="assist">ASSISTS</option>
+            </select>
+            <select className="brutal-select" style={{ fontSize: "0.6rem", padding: "2px 8px", background: "#fff", color: "#000" }} value={filterOutcome} onChange={e => setFilterOutcome(e.target.value)}>
+              <option value="all">ALL OUTCOMES</option>
+              <option value="goal">GOALS</option>
+              <option value="miss">OTHER</option>
+            </select>
+          </div>
+        </div>
+
+        <div style={{ flex: 1, overflowY: "auto" }}>
+          {filteredEvents.length === 0 ? (
+            <p style={{ fontSize: "0.8rem", color: "#666", textAlign: "center", padding: 64 }}>NO MATCHING EVENTS</p>
+          ) : (
+            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.75rem" }}>
+              <thead style={{ position: "sticky", top: 0, background: "#f0f0f0", borderBottom: "2px solid #000", zIndex: 1 }}>
+                <tr style={{ color: "#666", fontWeight: 700 }}>
+                  <th style={{ padding: "12px 16px", textAlign: "left", width: 80 }}>TIME</th>
+                  <th style={{ padding: "12px 16px", textAlign: "left", width: 40 }}>T</th>
+                  <th style={{ padding: "12px 16px", textAlign: "left" }}>PLAYER</th>
+                  <th style={{ padding: "12px 16px", textAlign: "left" }}>ACTION</th>
+                  <th style={{ padding: "12px 16px", textAlign: "left" }}>OUTCOME</th>
+                  <th style={{ padding: "12px 16px", textAlign: "right" }}></th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredEvents.map((ev) => {
+                  const player = teamSheet.find(p => p.id === ev.action_player_id);
+                  return (
+                    <tr 
+                      key={ev.id} 
+                      onClick={() => handleSeek(ev.timestamp)}
+                      className="timeline-row"
+                      style={{ borderBottom: "1px solid #eee", cursor: "pointer" }}
+                    >
+                      <td style={{ padding: "12px 16px", fontWeight: 800 }}>{ev.timestamp || "0'"}</td>
+                      <td style={{ padding: "12px 16px" }}>
+                        <div style={{ width: 10, height: 10, borderRadius: "50%", background: ev.team_type === 'focus_team' ? '#34D399' : '#F87171' }}></div>
+                      </td>
+                      <td style={{ padding: "12px 16px", fontWeight: 600 }}>
+                        {player ? `${player.jersey_number} ${player.player_name.toUpperCase()}` : "—"}
+                      </td>
+                      <td style={{ padding: "12px 16px" }}>{ev.event_type.replace("_", " ").toUpperCase()}</td>
+                      <td style={{ padding: "12px 16px", fontWeight: 700, color: ev.shot_outcome === "goal" ? "#34D399" : "#000" }}>
+                        {ev.shot_outcome ? ev.shot_outcome.toUpperCase() : "SUCCESSFUL"}
+                      </td>
+                      <td style={{ padding: "12px 16px", textAlign: "right" }}>
+                        <button onClick={(e) => { e.stopPropagation(); handleDeleteEvent(ev.id); }} style={{ color: "#ccc", background: "none", border: "none", cursor: "pointer", fontSize: "1.1rem" }}>✕</button>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          )}
         </div>
       </div>
 
@@ -412,7 +419,8 @@ export default function TaggerPage() {
 
       <style jsx>{`
         .timeline-row:hover {
-          background: #eee;
+          background: #fdfdfd;
+          background-color: #f0fdf4;
         }
       `}</style>
     </div>
