@@ -210,28 +210,53 @@ body {
 
 /* ─── RESPONSIVE LAYOUTS ─── */
 .dashboard-grid {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 16px;
-  align-items: start;
-}
-
-.dashboard-right-col {
   display: flex;
   flex-direction: column;
-  gap: 10px;
-  /* On mobile, give it a fixed height so the event log can scroll */
-  height: 80vh;
+  gap: 16px;
 }
+
+/* Mobile: unwrap columns so children can be ordered freely */
+.dashboard-left-col, .dashboard-right-col {
+  display: contents;
+}
+
+/* Mobile Order Assignments */
+.order-pitch { order: 1; }
+.order-video { order: 2; }
+.order-stats { order: 3; }
+.order-matches { order: 4; }
+.order-legend { order: 5; }
+.order-selected { order: 6; }
+.order-log { order: 7; height: 60vh; }
 
 @media (min-width: 1024px) {
   .dashboard-grid {
+    display: grid;
     grid-template-columns: 1fr 1fr;
+    align-items: start;
+    gap: 16px;
+  }
+  .dashboard-left-col {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
   }
   .dashboard-right-col {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
     height: calc(100vh - 140px);
     position: sticky;
     top: 12px;
   }
+  /* Reset mobile overrides */
+  .order-pitch, .order-video, .order-stats, .order-matches, .order-legend, .order-selected {
+    order: unset;
+  }
+  .order-log {
+    order: unset;
+    height: auto;
+  }
 }
+
 

@@ -370,7 +370,8 @@ export default function DashboardPage() {
           <div className="dashboard-grid">
 
             {/* LEFT: PITCH */}
-            <div>
+            <div className="dashboard-left-col">
+              <div className="order-pitch">
               <ScoutingPitch
                 events={filteredEvents}
                 selectedEventId={activeEvent?.id}
@@ -378,14 +379,15 @@ export default function DashboardPage() {
                 selectedTeam={selectedTeam}
                 heatmapMode={heatmapMode}
               />
+              </div>
 
-              <div className="brutal-card" style={{ marginTop: 10, padding: "8px 12px", display: "flex", gap: 20, fontSize: "0.68rem", flexWrap: "wrap", alignItems: "center" }}>
+              <div className="brutal-card order-legend" style={{ marginTop: 10, padding: "8px 12px", display: "flex", gap: 20, fontSize: "0.68rem", flexWrap: "wrap", alignItems: "center" }}>
                 <span><span style={{ color: COLOR_OPP,   fontWeight: 900 }}>■</span> {selectedTeam} — L→R</span>
                 <span><span style={{ color: COLOR_OTHER, fontWeight: 900 }}>■</span> Opposition — R→L</span>
                 <span style={{ marginLeft: "auto", color: "#999" }}>Click event → seek video</span>
               </div>
 
-              <div className="brutal-card" style={{ marginTop: 10, padding: 10 }}>
+              <div className="brutal-card order-matches" style={{ marginTop: 10, padding: 10 }}>
                 <div style={{ fontWeight: 800, fontSize: "0.7rem", marginBottom: 6 }}>MATCHES</div>
                 {teamMatches.filter(m => selectedMatchIds.includes(m.id)).map(m => {
                   const cnt = filteredEvents.filter(e => e.match_id === m.id && e.isNextOpponent).length;
@@ -400,7 +402,7 @@ export default function DashboardPage() {
 
               {/* Player Contribution */}
               {playerStats.length > 0 && (
-                <div className="brutal-card" style={{ marginTop: 10, padding: 0, overflow: "hidden" }}>
+                <div className="brutal-card order-stats" style={{ marginTop: 10, padding: 0, overflow: "hidden" }}>
                   <div style={{ background: COLOR_OPP, color: "#fff", padding: "5px 10px", fontWeight: 800, fontSize: "0.65rem" }}>PLAYER CONTRIBUTIONS — {selectedTeam}</div>
                   <div style={{ overflowX: "auto" }}>
                     <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.68rem" }}>
@@ -434,7 +436,7 @@ export default function DashboardPage() {
 
             {/* RIGHT: VIDEO + LOG */}
             <div className="dashboard-right-col">
-              <div className="brutal-card" style={{ overflow: "hidden", flexShrink: 0 }}>
+              <div className="brutal-card order-video" style={{ overflow: "hidden", flexShrink: 0 }}>
                 <div style={{ background: "#000", color: "#fff", padding: "6px 12px", fontWeight: 800, fontSize: "0.7rem", display: "flex", justifyContent: "space-between" }}>
                   <span>📹 VIDEO</span>
                   {activeEvent && <span style={{ color: "#FACC15" }}>{activeEvent.timestamp} — {activeEvent.event_type?.replace("_", " ").toUpperCase()}</span>}
@@ -454,7 +456,7 @@ export default function DashboardPage() {
               </div>
 
               {activeEvent && (
-                <div className="brutal-card" style={{ padding: 10, borderLeft: `4px solid ${activeEvent.isNextOpponent ? COLOR_OPP : COLOR_OTHER}`, flexShrink: 0 }}>
+                <div className="brutal-card order-selected" style={{ padding: 10, borderLeft: `4px solid ${activeEvent.isNextOpponent ? COLOR_OPP : COLOR_OTHER}`, flexShrink: 0 }}>
                   <div style={{ fontWeight: 800, fontSize: "0.7rem", marginBottom: 6 }}>SELECTED EVENT</div>
                   <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 4, fontSize: "0.68rem" }}>
                     <div><span style={{ color: "#666" }}>TEAM</span><br/><b style={{ color: activeEvent.isNextOpponent ? COLOR_OPP : COLOR_OTHER }}>{activeEvent.action_team}</b></div>
@@ -468,7 +470,7 @@ export default function DashboardPage() {
               )}
 
               {/* EVENT LOG — fills all remaining height */}
-              <div className="brutal-card" style={{ padding: 0, overflow: "hidden", flex: 1, display: "flex", flexDirection: "column", minHeight: 0 }}>
+              <div className="brutal-card order-log" style={{ padding: 0, overflow: "hidden", flex: 1, display: "flex", flexDirection: "column", minHeight: 0 }}>
                 <div style={{ background: COLOR_OPP, color: "#fff", padding: "5px 10px", fontWeight: 800, fontSize: "0.65rem", flexShrink: 0 }}>
                   {selectedTeam} — EVENT LOG ({filteredEvents.filter(e => e.isNextOpponent).length})
                 </div>
