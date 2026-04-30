@@ -49,6 +49,38 @@ export default function TaggerPage() {
   const ytPlayerRef = useRef(null);
   const router = useRouter();
 
+  // ─── Hotkeys ───
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      // Ignore if typing in an input or textarea
+      if (e.target.tagName === "INPUT" || e.target.tagName === "TEXTAREA" || e.target.tagName === "SELECT") {
+        return;
+      }
+
+      if (e.code === "Space") {
+        e.preventDefault();
+        if (ytPlayerRef.current) {
+          const state = ytPlayerRef.current.getPlayerState();
+          if (state === 1) ytPlayerRef.current.pauseVideo();
+          else ytPlayerRef.current.playVideo();
+        } else if (videoRef.current) {
+          if (videoRef.current.paused) videoRef.current.play();
+          else videoRef.current.pause();
+        }
+      }
+
+      if (e.code === "Enter") {
+        e.preventDefault();
+        if (activeEventData) {
+          handleSaveEvent();
+        }
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [activeEventData, ytPlayerRef, videoRef, tagForm]); // Depend on relevant state
+
   // ─── Check Auth ───
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -94,7 +126,7 @@ export default function TaggerPage() {
     setTagForm(f => ({ ...f, event_type: tool }));
   };
 
-  const handleSaveEvent = async () => {
+  const handleSaveEvent = useCallback(async () => {
     if (!selectedMatchId || !activeEventData) return;
 
     let currentTime = timestamp;
@@ -122,12 +154,19 @@ export default function TaggerPage() {
     };
 
     const { data, error } = await supabase.from("highlight_events").insert([payload]).select().single();
-    if (!error && data) {
+    
+    if (error) {
+      console.error("SAVE ERROR:", error);
+      alert(`SAVE FAILED: ${error.message}`);
+      return;
+    }
+
+    if (data) {
       setEvents((prev) => [...prev, data]);
       setActiveEventData(null);
       setTagForm({ team_type: "focus_team", event_type: "shot", action_player_id: "", reaction_player_id: "", shot_outcome: "", body_part: "", goal_x: null, goal_y: null });
     }
-  };
+  }, [selectedMatchId, activeEventData, timestamp, direction, tagForm, ytPlayerRef, videoRef]);
 
   const handleDeleteEvent = async (id) => {
     const { error } = await supabase.from("highlight_events").delete().eq("id", id);
