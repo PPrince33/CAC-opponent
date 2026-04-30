@@ -79,7 +79,7 @@ export default function TaggerPage() {
     setLoading(true);
     const { data, error } = await supabase
       .from("opp_matches")
-      .insert([form])
+      .insert([{ ...form, hilight: false }])
       .select()
       .single();
     if (!error && data) {

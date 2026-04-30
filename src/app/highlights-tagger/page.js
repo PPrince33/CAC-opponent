@@ -7,6 +7,7 @@ import YouTube from "react-youtube";
 import HighlightTaggerPitch from "@/components/HighlightTaggerPitch";
 import HighlightModal from "@/components/HighlightModal";
 import TeamSheetManager from "@/components/TeamSheetManager";
+import MatchModal from "@/components/MatchModal";
 
 export default function HighlightsTaggerPage() {
   const [matches, setMatches] = useState([]);
@@ -20,6 +21,9 @@ export default function HighlightsTaggerPage() {
   const [timestamp, setTimestamp] = useState("");
   const [tool, setTool] = useState("shot"); // 'shot' or 'pass'
   const [activeEventData, setActiveEventData] = useState(null); // { startX, startY, endX, endY }
+
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
 
   const [loading, setLoading] = useState(false);
   const [authChecked, setAuthChecked] = useState(false);
@@ -39,18 +43,52 @@ export default function HighlightsTaggerPage() {
     });
   }, [router]);
 
+  const loadMatches = async () => {
+    const { data } = await supabase
+      .from("opp_matches")
+      .select("*")
+      .eq("hilight", true)
+      .order("created_at", { ascending: false });
+    setMatches(data || []);
+  };
+
   // ─── Load matches ───
   useEffect(() => {
-    const loadMatches = async () => {
-      const { data } = await supabase
-        .from("opp_matches")
-        .select("*")
-        .eq("hilight", true)
-        .order("created_at", { ascending: false });
-      setMatches(data || []);
-    };
     loadMatches();
   }, []);
+
+  // ─── Create match ───
+  const handleCreateMatch = async (form) => {
+    setLoading(true);
+    const { data, error } = await supabase
+      .from("opp_matches")
+      .insert([{ ...form, hilight: true }])
+      .select()
+      .single();
+    if (!error && data) {
+      await loadMatches();
+      setSelectedMatchId(data.id);
+    }
+    setShowCreateModal(false);
+    setLoading(false);
+  };
+
+  // ─── Edit match ───
+  const handleEditMatch = async (form) => {
+    setLoading(true);
+    const { data, error } = await supabase
+      .from("opp_matches")
+      .update(form)
+      .eq("id", selectedMatchId)
+      .select()
+      .single();
+    if (!error && data) {
+      await loadMatches();
+      setSelectedMatch(data);
+    }
+    setShowEditModal(false);
+    setLoading(false);
+  };
 
   // ─── Load events and team sheet when match changes ───
   useEffect(() => {
@@ -159,6 +197,17 @@ export default function HighlightsTaggerPage() {
             ))}
           </select>
         </div>
+        
+        <div style={{ display: "flex", gap: 8 }}>
+          <button onClick={() => setShowCreateModal(true)} className="brutal-btn" style={{ background: "#000", color: "#FACC15", fontSize: "0.75rem" }}>
+            + NEW MATCH
+          </button>
+          {selectedMatchId && (
+            <button onClick={() => setShowEditModal(true)} className="brutal-btn" style={{ background: "#fff", color: "#000", fontSize: "0.75rem", border: "2px solid #000" }}>
+              ✎ EDIT MATCH
+            </button>
+          )}
+        </div>
 
         <div style={{ marginLeft: "auto", display: "flex", gap: 8, alignItems: "center" }}>
           {/* Direction toggle */}
@@ -252,6 +301,21 @@ export default function HighlightsTaggerPage() {
           teamSheet={teamSheet}
           onSave={handleSaveEvent}
           onCancel={() => setActiveEventData(null)}
+        />
+      )}
+
+      {showCreateModal && (
+        <MatchModal
+          onSave={handleCreateMatch}
+          onCancel={() => setShowCreateModal(false)}
+        />
+      )}
+
+      {showEditModal && selectedMatch && (
+        <MatchModal
+          initialData={selectedMatch}
+          onSave={handleEditMatch}
+          onCancel={() => setShowEditModal(false)}
         />
       )}
     </div>
