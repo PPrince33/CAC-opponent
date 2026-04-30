@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { supabase } from "@/lib/supabase";
 import { useRouter } from "next/navigation";
+import YouTube from "react-youtube";
 import GridPitch from "@/components/GridPitch";
 import CoordinatePitch from "@/components/CoordinatePitch";
 import ShotOutcomeModal from "@/components/ShotOutcomeModal";
@@ -24,6 +25,7 @@ export default function TaggerPage() {
   const [loading, setLoading] = useState(false);
   const [authChecked, setAuthChecked] = useState(false);
   const videoRef = useRef(null);
+  const ytPlayerRef = useRef(null);
   const router = useRouter();
 
   // ─── Check Auth ───
@@ -109,12 +111,21 @@ export default function TaggerPage() {
     async (eventData) => {
       if (!selectedMatchId) return;
 
-      // Try to get time automatically from MP4 video player
+      // Try to get time automatically from MP4 or YouTube player
       let currentTime = timestamp;
+      let timeInSeconds = null;
+
       if (videoRef.current) {
-        const time = videoRef.current.currentTime;
-        const m = Math.floor(time / 60).toString().padStart(2, "0");
-        const s = Math.floor(time % 60).toString().padStart(2, "0");
+        timeInSeconds = videoRef.current.currentTime;
+      } else if (ytPlayerRef.current) {
+        // react-youtube exposes the YT player API directly
+        const ytTime = ytPlayerRef.current.getCurrentTime();
+        if (ytTime) timeInSeconds = ytTime;
+      }
+
+      if (timeInSeconds !== null) {
+        const m = Math.floor(timeInSeconds / 60).toString().padStart(2, "0");
+        const s = Math.floor(timeInSeconds % 60).toString().padStart(2, "0");
         currentTime = `${m}:${s}`;
         setTimestamp(currentTime); // Update the input box to show the grabbed time
       }
@@ -264,13 +275,12 @@ export default function TaggerPage() {
               {!selectedMatch ? (
                 <p style={{ color: "#666", fontSize: "0.8rem" }}>SELECT A MATCH TO BEGIN</p>
               ) : youtubeId ? (
-                <iframe
-                  width="100%" height="100%"
-                  src={`https://www.youtube.com/embed/${youtubeId}?enablejsapi=1`}
-                  frameBorder="0"
-                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                  allowFullScreen
-                  style={{ border: "none" }}
+                <YouTube
+                  videoId={youtubeId}
+                  opts={{ width: "100%", height: "100%", playerVars: { autoplay: 0, rel: 0 } }}
+                  onReady={(e) => { ytPlayerRef.current = e.target; }}
+                  className="w-full h-full"
+                  iframeClassName="w-full h-full"
                 />
               ) : videoLink ? (
                 <video ref={videoRef} src={videoLink} controls style={{ width: "100%", height: "100%" }} />
