@@ -263,79 +263,95 @@ export default function TaggerPage() {
           </div>
 
           {activeEventData ? (
-            <div className="brutal-card animate-pop-in" style={{ padding: 12, border: "3px solid #34D399" }}>
-              <div style={{ background: "#34D399", color: "#000", padding: "4px 8px", fontWeight: 800, fontSize: "0.65rem", marginBottom: 12 }}>⚡ LOG EVENT</div>
+            <div className="brutal-card animate-pop-in" style={{ padding: 12, border: "3px solid #34D399", background: "#fff" }}>
+              <div style={{ background: "#000", color: "#34D399", padding: "6px 10px", fontWeight: 800, fontSize: "0.7rem", marginBottom: 12, textAlign: "center" }}>
+                ⚡ LOGGING ACTION
+              </div>
               
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 8 }}>
-                <div>
-                  <label style={{ fontSize: "0.6rem", fontWeight: 800 }}>TEAM</label>
-                  <select className="brutal-select w-full" style={{ fontSize: "0.65rem", padding: "4px" }} value={tagForm.team_type} onChange={e => setTagForm({...tagForm, team_type: e.target.value})}>
-                    <option value="focus_team">{selectedMatch?.home_team?.toUpperCase()}</option>
-                    <option value="opponent">{selectedMatch?.away_team?.toUpperCase()}</option>
+              {/* STEP 1: TEAM & PLAYER */}
+              <div style={{ marginBottom: 12 }}>
+                <label style={{ fontSize: "0.6rem", fontWeight: 800, color: "#666" }}>1. TEAM & PLAYER</label>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 2fr", gap: 6, marginTop: 4 }}>
+                  <select className="brutal-select" style={{ fontSize: "0.65rem", padding: "4px" }} value={tagForm.team_type} onChange={e => setTagForm({...tagForm, team_type: e.target.value})}>
+                    <option value="focus_team">{selectedMatch?.home_team?.substring(0, 10).toUpperCase()}</option>
+                    <option value="opponent">{selectedMatch?.away_team?.substring(0, 10).toUpperCase()}</option>
+                  </select>
+                  <select className="brutal-select" style={{ fontSize: "0.65rem", padding: "4px" }} value={tagForm.action_player_id} onChange={e => setTagForm({...tagForm, action_player_id: e.target.value})}>
+                    <option value="">— SELECT PLAYER —</option>
+                    {teamSheet
+                      .filter(p => {
+                        const targetTeam = tagForm.team_type === "focus_team" ? selectedMatch?.home_team : selectedMatch?.away_team;
+                        return p.team_name === targetTeam;
+                      })
+                      .map(p => (<option key={p.id} value={p.id}>{p.jersey_number} {p.player_name.toUpperCase()}</option>))}
                   </select>
                 </div>
-                <div>
-                  <label style={{ fontSize: "0.6rem", fontWeight: 800 }}>ACTION</label>
-                  <select className="brutal-select w-full" style={{ fontSize: "0.65rem", padding: "4px" }} value={tagForm.event_type} onChange={e => setTagForm({...tagForm, event_type: e.target.value})}>
+              </div>
+
+              {/* STEP 2: ACTION & OUTCOME */}
+              <div style={{ marginBottom: 12 }}>
+                <label style={{ fontSize: "0.6rem", fontWeight: 800, color: "#666" }}>2. ACTION & OUTCOME</label>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6, marginTop: 4 }}>
+                  <select className="brutal-select" style={{ fontSize: "0.65rem", padding: "4px" }} value={tagForm.event_type} onChange={e => setTagForm({...tagForm, event_type: e.target.value})}>
                     {tool === "shot" ? <option value="shot">SHOT</option> : <><option value="key_pass">KEY PASS</option><option value="assist">ASSIST</option></>}
                   </select>
+                  {tagForm.event_type === "shot" ? (
+                    <select className="brutal-select" style={{ fontSize: "0.65rem", padding: "4px" }} value={tagForm.shot_outcome} onChange={e => setTagForm({...tagForm, shot_outcome: e.target.value})}>
+                      <option value="">— OUTCOME —</option>
+                      <option value="goal">GOAL</option>
+                      <option value="target">ON TARGET</option>
+                      <option value="blocked">BLOCKED</option>
+                      <option value="miss">MISS</option>
+                    </select>
+                  ) : (
+                    <select className="brutal-select" style={{ fontSize: "0.65rem", padding: "4px" }} value={tagForm.reaction_player_id} onChange={e => setTagForm({...tagForm, reaction_player_id: e.target.value})}>
+                      <option value="">— TARGET PLAYER —</option>
+                      {teamSheet
+                        .filter(p => {
+                          const targetTeam = tagForm.team_type === "focus_team" ? selectedMatch?.home_team : selectedMatch?.away_team;
+                          return p.team_name === targetTeam;
+                        })
+                        .map(p => (<option key={p.id} value={p.id}>{p.jersey_number} {p.player_name.toUpperCase()}</option>))}
+                    </select>
+                  )}
                 </div>
               </div>
 
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 8 }}>
-                <div>
-                  <label style={{ fontSize: "0.6rem", fontWeight: 800 }}>PLAYER</label>
-                  <select className="brutal-select w-full" style={{ fontSize: "0.65rem", padding: "4px" }} value={tagForm.action_player_id} onChange={e => setTagForm({...tagForm, action_player_id: e.target.value})}>
-                    <option value="">— SELECT —</option>
-                    {teamSheet
-                      .filter(p => {
-                        const targetTeam = tagForm.team_type === "focus_team" ? selectedMatch?.home_team : selectedMatch?.away_team;
-                        return p.team_name === targetTeam;
-                      })
-                      .map(p => (<option key={p.id} value={p.id}>{p.jersey_number} {p.player_name}</option>))}
-                  </select>
-                </div>
-                <div>
-                  <label style={{ fontSize: "0.6rem", fontWeight: 800 }}>TO (REACTION)</label>
-                  <select className="brutal-select w-full" style={{ fontSize: "0.65rem", padding: "4px" }} value={tagForm.reaction_player_id} onChange={e => setTagForm({...tagForm, reaction_player_id: e.target.value})}>
-                    <option value="">— SELECT —</option>
-                    {teamSheet
-                      .filter(p => {
-                        const targetTeam = tagForm.team_type === "focus_team" ? selectedMatch?.home_team : selectedMatch?.away_team;
-                        return p.team_name === targetTeam;
-                      })
-                      .map(p => (<option key={p.id} value={p.id}>{p.jersey_number} {p.player_name}</option>))}
-                  </select>
-                </div>
-                <div>
-                  <label style={{ fontSize: "0.6rem", fontWeight: 800 }}>BODY PART</label>
-                  <select className="brutal-select w-full" style={{ fontSize: "0.65rem", padding: "4px" }} value={tagForm.body_part} onChange={e => setTagForm({...tagForm, body_part: e.target.value})}>
-                    <option value="">— SELECT —</option>
-                    <option value="right_foot">RIGHT FOOT</option>
-                    <option value="left_foot">LEFT FOOT</option>
-                    <option value="head">HEAD</option>
-                    <option value="other">OTHER</option>
-                  </select>
+              {/* STEP 3: BODY PART */}
+              <div style={{ marginBottom: 12 }}>
+                <label style={{ fontSize: "0.6rem", fontWeight: 800, color: "#666" }}>3. BODY PART</label>
+                <div style={{ display: "flex", gap: 4, marginTop: 4 }}>
+                  {["right_foot", "left_foot", "head"].map(bp => (
+                    <button 
+                      key={bp} 
+                      onClick={() => setTagForm({...tagForm, body_part: bp})}
+                      className="brutal-btn"
+                      style={{ 
+                        flex: 1, fontSize: "0.55rem", padding: "6px 2px",
+                        background: tagForm.body_part === bp ? "#000" : "#fff",
+                        color: tagForm.body_part === bp ? "#34D399" : "#000"
+                      }}
+                    >
+                      {bp.replace('_', ' ').toUpperCase()}
+                    </button>
+                  ))}
                 </div>
               </div>
 
+              {/* STEP 4: GOAL TARGET (SHOTS ONLY) */}
               {tagForm.event_type === "shot" && (
-                <div style={{ borderTop: "1px solid #ddd", paddingTop: 8 }}>
-                   <div style={{ display: "flex", gap: 4, marginBottom: 8 }}>
-                    {["goal", "target", "blocked", "miss"].map(o => (
-                      <button key={o} onClick={() => setTagForm({...tagForm, shot_outcome: o})} className="brutal-btn" style={{ flex: 1, fontSize: "0.55rem", padding: "4px", background: tagForm.shot_outcome === o ? "#000" : "#fff", color: tagForm.shot_outcome === o ? "#FACC15" : "#000" }}>{o.toUpperCase()}</button>
-                    ))}
-                  </div>
-                  <div onClick={handleGoalClick} style={{ aspectRatio: "3/1", background: "#f0f0f0", border: "2px solid #000", position: "relative", cursor: "crosshair" }}>
+                <div style={{ marginBottom: 12 }}>
+                  <label style={{ fontSize: "0.6rem", fontWeight: 800, color: "#666" }}>4. GOAL TARGET</label>
+                  <div onClick={handleGoalClick} style={{ aspectRatio: "3/1", background: "#f0f0f0", border: "2px solid #000", position: "relative", cursor: "crosshair", marginTop: 4 }}>
                      <div style={{ position: "absolute", top: "10%", left: "5%", right: "5%", bottom: 0, border: "2px solid #666", borderBottom: "none" }}></div>
                      {tagForm.goal_x !== null && <div style={{ position: "absolute", left: `${tagForm.goal_x}%`, top: `${tagForm.goal_y}%`, width: 8, height: 8, background: "#EF4444", borderRadius: "50%", transform: "translate(-50%, -50%)", border: "1px solid #000" }}></div>}
                   </div>
                 </div>
               )}
 
-              <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
-                <button onClick={handleSaveEvent} className="brutal-btn" style={{ background: "#34D399", flex: 1, fontSize: "0.7rem", padding: "8px" }}>SAVE ACTION</button>
-                <button onClick={() => setActiveEventData(null)} className="brutal-btn" style={{ background: "#fff", fontSize: "0.7rem", padding: "8px" }}>CANCEL</button>
+              <div style={{ display: "flex", gap: 8, marginTop: 16 }}>
+                <button onClick={handleSaveEvent} className="brutal-btn" style={{ background: "#34D399", color: "#000", flex: 2, fontSize: "0.75rem", fontWeight: 900, padding: "10px" }}>✓ LOG ENTRY</button>
+                <button onClick={() => setActiveEventData(null)} className="brutal-btn" style={{ background: "#fff", flex: 1, fontSize: "0.7rem" }}>CANCEL</button>
               </div>
             </div>
           ) : (
