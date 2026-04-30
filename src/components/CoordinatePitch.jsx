@@ -70,12 +70,12 @@ export default function CoordinatePitch({
   const getMarker = (outcome) => {
     switch (outcome) {
       case "goal":
-        return { symbol: "⚽", color: "#34D399", size: "1rem" };
+        return { symbol: "⚽", color: "#34D399", size: "1.6rem" };
       case "target":
-        return { symbol: "✦", color: "#FACC15", size: "0.9rem" };
+        return { symbol: "✦", color: "#FACC15", size: "1.8rem" };
       case "miss":
       default:
-        return { symbol: "•", color: "#F87171", size: "1.1rem" };
+        return { symbol: "•", color: "#F87171", size: "2rem" };
     }
   };
 

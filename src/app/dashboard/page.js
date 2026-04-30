@@ -193,13 +193,15 @@ export default function DashboardPage() {
               />
 
               {/* Combined Shot map — full pitch */}
-              <div style={{ gridColumn: "1 / -1" }}>
-                <CoordinatePitch
-                  title={`🎯 ${selectedTeam} — SHOTS (LEFT: AGAINST, RIGHT: FOR)`}
-                  events={[...shotTakenEvents, ...shotConcededEvents]}
-                  zoomToBox={null}
-                  mode="display"
-                />
+              <div style={{ gridColumn: "1 / -1", display: "flex", justifyContent: "center" }}>
+                <div style={{ width: "100%", maxWidth: "800px" }}>
+                  <CoordinatePitch
+                    title={`🎯 ${selectedTeam} — SHOTS (LEFT: AGAINST, RIGHT: FOR)`}
+                    events={[...shotTakenEvents, ...shotConcededEvents]}
+                    zoomToBox={null}
+                    mode="display"
+                  />
+                </div>
               </div>
             </div>
           </>
