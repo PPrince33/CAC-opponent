@@ -4,26 +4,30 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { supabase } from "@/lib/supabase";
 import { useRouter } from "next/navigation";
 import YouTube from "react-youtube";
-import GridPitch from "@/components/GridPitch";
-import CoordinatePitch from "@/components/CoordinatePitch";
-import ShotOutcomeModal from "@/components/ShotOutcomeModal";
+import HighlightTaggerPitch from "@/components/HighlightTaggerPitch";
+import HighlightModal from "@/components/HighlightModal";
+import TeamSheetManager from "@/components/TeamSheetManager";
 import MatchModal from "@/components/MatchModal";
-import EventLog from "@/components/EventLog";
 
 export default function TaggerPage() {
-  // ─── State ───
   const [matches, setMatches] = useState([]);
   const [selectedMatchId, setSelectedMatchId] = useState("");
   const [selectedMatch, setSelectedMatch] = useState(null);
+  
   const [events, setEvents] = useState([]);
-  const [half, setHalf] = useState(1);
+  const [teamSheet, setTeamSheet] = useState([]);
+
   const [direction, setDirection] = useState("L2R");
   const [timestamp, setTimestamp] = useState("");
+  const [tool, setTool] = useState("shot"); // 'shot' or 'pass'
+  const [activeEventData, setActiveEventData] = useState(null); // { startX, startY, endX, endY }
+
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
-  const [showShotModal, setShowShotModal] = useState(null); // { eventType, x, y }
+
   const [loading, setLoading] = useState(false);
   const [authChecked, setAuthChecked] = useState(false);
+  
   const videoRef = useRef(null);
   const ytPlayerRef = useRef(null);
   const router = useRouter();
@@ -39,47 +43,26 @@ export default function TaggerPage() {
     });
   }, [router]);
 
+  const loadMatches = async () => {
+    const { data } = await supabase
+      .from("opp_matches")
+      .select("*")
+      .order("created_at", { ascending: false });
+    setMatches(data || []);
+  };
+
   // ─── Load matches ───
   useEffect(() => {
     loadMatches();
   }, []);
 
-  const loadMatches = async () => {
-    const { data } = await supabase
-      .from("opp_matches")
-      .select("*")
-      .eq("hilight", false)
-      .order("created_at", { ascending: false });
-    setMatches(data || []);
-  };
-
-  // ─── Load events when match changes ───
-  useEffect(() => {
-    if (!selectedMatchId) {
-      setEvents([]);
-      setSelectedMatch(null);
-      return;
-    }
-    const match = matches.find((m) => m.id === selectedMatchId);
-    setSelectedMatch(match);
-    loadEvents(selectedMatchId);
-  }, [selectedMatchId, matches]);
-
-  const loadEvents = async (matchId) => {
-    const { data } = await supabase
-      .from("opp_raw_events")
-      .select("*")
-      .eq("match_id", matchId)
-      .order("created_at", { ascending: true });
-    setEvents(data || []);
-  };
-
   // ─── Create match ───
   const handleCreateMatch = async (form) => {
     setLoading(true);
+    // Force hilight true for all matches now
     const { data, error } = await supabase
       .from("opp_matches")
-      .insert([{ ...form, hilight: false }])
+      .insert([{ ...form, hilight: true }])
       .select()
       .single();
     if (!error && data) {
@@ -107,131 +90,128 @@ export default function TaggerPage() {
     setLoading(false);
   };
 
-  // ─── Log event ───
-  const logEvent = useCallback(
-    async (eventData) => {
-      if (!selectedMatchId) return;
+  // ─── Load events and team sheet when match changes ───
+  useEffect(() => {
+    if (!selectedMatchId) {
+      setEvents([]);
+      setTeamSheet([]);
+      setSelectedMatch(null);
+      return;
+    }
+    const match = matches.find((m) => m.id === selectedMatchId);
+    setSelectedMatch(match);
+    
+    // Load Events
+    supabase
+      .from("highlight_events")
+      .select("*")
+      .eq("match_id", selectedMatchId)
+      .order("created_at", { ascending: true })
+      .then(({ data }) => setEvents(data || []));
 
-      // Try to get time automatically from MP4 or YouTube player
-      let currentTime = timestamp;
-      let timeInSeconds = null;
+    // Load Team Sheet
+    supabase
+      .from("team_sheets")
+      .select("*")
+      .eq("match_id", selectedMatchId)
+      .then(({ data }) => setTeamSheet(data || []));
 
-      if (videoRef.current) {
-        timeInSeconds = videoRef.current.currentTime;
-      } else if (ytPlayerRef.current) {
-        // react-youtube exposes the YT player API directly
-        const ytTime = ytPlayerRef.current.getCurrentTime();
-        if (ytTime) timeInSeconds = ytTime;
-      }
+  }, [selectedMatchId, matches]);
 
-      if (timeInSeconds !== null) {
-        const m = Math.floor(timeInSeconds / 60).toString().padStart(2, "0");
-        const s = Math.floor(timeInSeconds % 60).toString().padStart(2, "0");
-        currentTime = `${m}:${s}`;
-        setTimestamp(currentTime); // Update the input box to show the grabbed time
-      }
-
-      const payload = {
-        match_id: selectedMatchId,
-        half,
-        home_team_direction: direction,
-        timestamp: currentTime,
-        ...eventData,
-      };
-      const { data, error } = await supabase
-        .from("opp_raw_events")
-        .insert([payload])
-        .select()
-        .single();
-      if (!error && data) {
-        setEvents((prev) => [...prev, data]);
-      }
-    },
-    [selectedMatchId, half, direction, timestamp]
-  );
-
-  // ─── Zone click handlers ───
-  const handleGainBall = (col, row) => {
-    logEvent({
-      event_type: "gain_ball",
-      zone_col: col,
-      zone_row: row,
-      location_x: (col - 0.5) * 10,
-      location_y: (row - 0.5) * 10,
-    });
+  const handlePitchInteraction = (startX, startY, endX, endY) => {
+    setActiveEventData({ startX, startY, endX, endY });
   };
 
-  const handleLoseBall = (col, row) => {
-    logEvent({
-      event_type: "lose_ball",
-      zone_col: col,
-      zone_row: row,
-      location_x: (col - 0.5) * 10,
-      location_y: (row - 0.5) * 10,
-    });
+  const handleSaveEvent = async (formData) => {
+    if (!selectedMatchId || !activeEventData) return;
+
+    let currentTime = timestamp;
+    let timeInSeconds = null;
+
+    if (videoRef.current) {
+      timeInSeconds = videoRef.current.currentTime;
+    } else if (ytPlayerRef.current) {
+      const ytTime = ytPlayerRef.current.getCurrentTime();
+      if (ytTime) timeInSeconds = ytTime;
+    }
+
+    if (timeInSeconds !== null) {
+      const m = Math.floor(timeInSeconds / 60).toString().padStart(2, "0");
+      const s = Math.floor(timeInSeconds % 60).toString().padStart(2, "0");
+      currentTime = `${m}:${s}`;
+      setTimestamp(currentTime);
+    }
+
+    const payload = {
+      match_id: selectedMatchId,
+      timestamp: currentTime,
+      home_team_direction: direction,
+      start_x: activeEventData.startX,
+      start_y: activeEventData.startY,
+      end_x: activeEventData.endX,
+      end_y: activeEventData.endY,
+      ...formData
+    };
+
+    const { data, error } = await supabase
+      .from("highlight_events")
+      .insert([payload])
+      .select()
+      .single();
+
+    if (!error && data) {
+      setEvents((prev) => [...prev, data]);
+    }
+    setActiveEventData(null);
   };
 
-  // ─── Shot click handlers ───
-  const handleShotTaken = (x, y) => {
-    setShowShotModal({ eventType: "shot_taken", x, y });
+  const handleDeleteEvent = async (id) => {
+    const { error } = await supabase.from("highlight_events").delete().eq("id", id);
+    if (!error) {
+      setEvents((prev) => prev.filter((ev) => ev.id !== id));
+    }
   };
 
-  const handleShotConceded = (x, y) => {
-    setShowShotModal({ eventType: "shot_conceded", x, y });
+  const handleSeek = (timestamp) => {
+    if (!timestamp) return;
+    const parts = timestamp.split(':');
+    if (parts.length < 2) return;
+    const seconds = parseInt(parts[0]) * 60 + parseInt(parts[1]);
+    
+    if (ytPlayerRef.current) {
+      ytPlayerRef.current.seekTo(seconds, true);
+    } else if (videoRef.current) {
+      videoRef.current.currentTime = seconds;
+      videoRef.current.play();
+    }
   };
 
-  const handleShotOutcome = (outcome) => {
-    if (!showShotModal) return;
-    logEvent({
-      event_type: showShotModal.eventType,
-      location_x: showShotModal.x,
-      location_y: showShotModal.y,
-      shot_outcome: outcome,
-    });
-    setShowShotModal(null);
-  };
+  if (!authChecked) return null;
 
-  // ─── Delete event ───
-  const handleDeleteEvent = async (eventId) => {
-    await supabase.from("opp_raw_events").delete().eq("id", eventId);
-    setEvents((prev) => prev.filter((e) => e.id !== eventId));
-  };
-
-  // ─── Video embed helper ───
-  const getYoutubeId = (url) => {
-    if (!url) return null;
-    const match = url.match(
-      /(?:youtube\.com\/(?:watch\?v=|embed\/)|youtu\.be\/)([a-zA-Z0-9_-]{11})/
-    );
-    return match ? match[1] : null;
-  };
-
-  const videoLink = selectedMatch?.video_link || "";
-  const youtubeId = getYoutubeId(videoLink);
-
-  // ─── Filter events by type ───
-  const gainEvents = events.filter((e) => e.event_type === "gain_ball");
-  const loseEvents = events.filter((e) => e.event_type === "lose_ball");
-  const shotTakenEvents = events.filter((e) => e.event_type === "shot_taken");
-  const shotConcededEvents = events.filter((e) => e.event_type === "shot_conceded");
-
-  if (!authChecked) return null; // Prevent flicker before redirect
+  // Video ID logic
+  let youtubeId = null;
+  let videoLink = selectedMatch?.video_link;
+  if (videoLink) {
+    const ytMatch = videoLink.match(/(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|watch\?.+&v=))([^&?]+)/);
+    if (ytMatch) youtubeId = ytMatch[1];
+  }
 
   return (
-    <div style={{ padding: 16, background: "var(--color-bg)", minHeight: "calc(100vh - 80px)" }}>
-      {/* ─── MATCH SELECTOR BAR ─── */}
-      <div style={{ background: "#FACC15", border: "3px solid #000", boxShadow: "4px 4px 0px 0px rgba(0,0,0,1)", padding: "12px 16px", display: "flex", flexWrap: "wrap", gap: 12, alignItems: "center", marginBottom: 16 }}>
+    <div style={{ padding: 16, maxWidth: 1400, margin: "0 auto", paddingBottom: 120 }}>
+      {/* ─── TOP CONTROL BAR ─── */}
+      <div style={{ background: "#34D399", border: "3px solid #000", boxShadow: "4px 4px 0px 0px rgba(0,0,0,1)", padding: "12px 16px", display: "flex", flexWrap: "wrap", gap: 12, alignItems: "center", marginBottom: 16 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
           <label style={{ fontSize: "0.75rem", fontWeight: 800 }}>MATCH:</label>
           <select className="brutal-select" value={selectedMatchId} onChange={(e) => setSelectedMatchId(e.target.value)} style={{ minWidth: 260 }}>
             <option value="">— SELECT MATCH —</option>
             {matches.map((m) => (
               <option key={m.id} value={m.id}>
-                {m.home_team} VS {m.away_team} ({m.score_home}-{m.score_away})
+                {m.home_team} VS {m.away_team}
               </option>
             ))}
           </select>
         </div>
+        
         <div style={{ display: "flex", gap: 8 }}>
           <button onClick={() => setShowCreateModal(true)} className="brutal-btn" style={{ background: "#000", color: "#FACC15", fontSize: "0.75rem" }}>
             + NEW MATCH
@@ -242,15 +222,8 @@ export default function TaggerPage() {
             </button>
           )}
         </div>
+
         <div style={{ marginLeft: "auto", display: "flex", gap: 8, alignItems: "center" }}>
-          {/* Half toggle */}
-          <div style={{ display: "flex", gap: 0 }}>
-            {[1, 2].map((h) => (
-              <button key={h} onClick={() => setHalf(h)} className="brutal-btn" style={{ background: half === h ? "#000" : "#fff", color: half === h ? "#FACC15" : "#000", fontSize: "0.75rem", padding: "6px 14px", boxShadow: half === h ? "2px 2px 0 0 rgba(0,0,0,1)" : "none" }}>
-                {h}H
-              </button>
-            ))}
-          </div>
           {/* Direction toggle */}
           <div style={{ display: "flex", gap: 0 }}>
             {["L2R", "R2L"].map((d) => (
@@ -264,9 +237,8 @@ export default function TaggerPage() {
         </div>
       </div>
 
-      {/* ─── MAIN LAYOUT ─── */}
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
-        {/* LEFT: Video Player */}
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 400px", gap: 16 }}>
+        {/* LEFT COLUMN: Video & Tagger */}
         <div>
           <div className="brutal-card" style={{ overflow: "hidden", marginBottom: 16 }}>
             <div style={{ background: "#000", color: "#fff", padding: "8px 12px", fontWeight: 800, fontSize: "0.75rem" }}>
@@ -278,10 +250,9 @@ export default function TaggerPage() {
               ) : youtubeId ? (
                 <YouTube
                   videoId={youtubeId}
-                  opts={{ width: "100%", height: "100%", playerVars: { autoplay: 0, rel: 0 } }}
+                  opts={{ width: "100%", height: "100%", playerVars: { autoplay: 0, rel: 0, modestbranding: 1 } }}
                   onReady={(e) => { ytPlayerRef.current = e.target; }}
-                  className="w-full h-full"
-                  iframeClassName="w-full h-full"
+                  style={{ width: "100%", height: "100%" }}
                 />
               ) : videoLink ? (
                 <video ref={videoRef} src={videoLink} controls style={{ width: "100%", height: "100%" }} />
@@ -290,23 +261,113 @@ export default function TaggerPage() {
               )}
             </div>
           </div>
-          {/* Event Log */}
-          <EventLog events={events} onDelete={handleDeleteEvent} />
+          
+          {/* Tool Selector */}
+          <div style={{ display: "flex", gap: 8, marginBottom: 8 }}>
+            <button onClick={() => setTool("shot")} className="brutal-btn" style={{ flex: 1, background: tool === "shot" ? "#000" : "#fff", color: tool === "shot" ? "#34D399" : "#000" }}>
+              🎯 SHOT TOOL (1 Click)
+            </button>
+            <button onClick={() => setTool("pass")} className="brutal-btn" style={{ flex: 1, background: tool === "pass" ? "#000" : "#fff", color: tool === "pass" ? "#FACC15" : "#000" }}>
+              ↗️ PASS TOOL (2 Clicks)
+            </button>
+          </div>
+
+          <HighlightTaggerPitch 
+            events={events}
+            tool={tool}
+            onEventComplete={handlePitchInteraction}
+            onEventClick={(ev) => handleSeek(ev.timestamp)}
+          />
         </div>
 
-        {/* RIGHT: 4 Pitches (2×2 grid) */}
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-          <GridPitch title="⬆ GAIN BALL" events={gainEvents} onZoneClick={selectedMatchId ? handleGainBall : undefined} colorScheme="teal" mode={selectedMatchId ? "tagger" : "heatmap"} />
-          <GridPitch title="⬇ LOSE BALL" events={loseEvents} onZoneClick={selectedMatchId ? handleLoseBall : undefined} colorScheme="orange" mode={selectedMatchId ? "tagger" : "heatmap"} />
-          <CoordinatePitch title="🎯 SHOTS TAKEN" events={shotTakenEvents} onPitchClick={selectedMatchId ? handleShotTaken : undefined} mode={selectedMatchId ? "tagger" : "display"} />
-          <CoordinatePitch title="🛡 SHOTS CONCEDED" events={shotConcededEvents} onPitchClick={selectedMatchId ? handleShotConceded : undefined} mode={selectedMatchId ? "tagger" : "display"} />
+        {/* RIGHT COLUMN: Team Sheet & Event Timeline */}
+        <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+          {selectedMatch && <TeamSheetManager matchId={selectedMatchId} />}
+
+          {/* Event Log / Timeline */}
+          <div className="brutal-card" style={{ flex: 1, display: "flex", flexDirection: "column", minHeight: 400 }}>
+            <div style={{ background: "#000", color: "#fff", padding: "8px 12px", fontWeight: 800, fontSize: "0.75rem" }}>
+              📋 EVENT TIMELINE
+            </div>
+            <div style={{ flex: 1, overflowY: "auto", padding: 0 }}>
+              {events.length === 0 ? (
+                <p style={{ fontSize: "0.8rem", color: "#666", textAlign: "center", padding: 32 }}>NO EVENTS LOGGED</p>
+              ) : (
+                <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.7rem" }}>
+                  <thead style={{ position: "sticky", top: 0, background: "#f0f0f0", borderBottom: "2px solid #000", zIndex: 1 }}>
+                    <tr style={{ color: "#666", fontWeight: 700 }}>
+                      <th style={{ padding: "8px 4px", textAlign: "left", width: 40 }}>TIME</th>
+                      <th style={{ padding: "8px 4px", textAlign: "left", width: 20 }}>T</th>
+                      <th style={{ padding: "8px 4px", textAlign: "left" }}>PLAYER</th>
+                      <th style={{ padding: "8px 4px", textAlign: "left" }}>ACTION</th>
+                      <th style={{ padding: "8px 4px", textAlign: "left" }}>OUT</th>
+                      <th style={{ padding: "8px 4px" }}></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {events.map((ev) => {
+                      const player = teamSheet.find(p => p.id === ev.action_player_id);
+                      return (
+                        <tr 
+                          key={ev.id} 
+                          onClick={() => handleSeek(ev.timestamp)}
+                          className="timeline-row"
+                          style={{ borderBottom: "1px solid #eee", cursor: "pointer" }}
+                        >
+                          <td style={{ padding: "8px 4px", fontWeight: 800 }}>{ev.timestamp || "0'"}</td>
+                          <td style={{ padding: "8px 4px" }}>
+                            <div style={{ width: 8, height: 8, borderRadius: "50%", background: ev.team_type === 'focus_team' ? '#34D399' : '#F87171' }}></div>
+                          </td>
+                          <td style={{ padding: "8px 4px", fontWeight: 600 }}>
+                            {player ? `${player.jersey_number} ${player.player_name.toUpperCase()}` : "—"}
+                          </td>
+                          <td style={{ padding: "8px 4px" }}>{ev.event_type.replace("_", " ").toUpperCase()}</td>
+                          <td style={{ padding: "8px 4px", fontWeight: 700, color: ev.shot_outcome === "goal" ? "#34D399" : "#000" }}>
+                            {ev.shot_outcome ? ev.shot_outcome.toUpperCase() : "SUCCESSFUL"}
+                          </td>
+                          <td style={{ padding: "8px 4px", textAlign: "right" }}>
+                            <button onClick={(e) => { e.stopPropagation(); handleDeleteEvent(ev.id); }} style={{ color: "#ccc", background: "none", border: "none", cursor: "pointer" }}>✕</button>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              )}
+            </div>
+          </div>
         </div>
       </div>
 
-      {/* ─── MODALS ─── */}
-      {showCreateModal && <MatchModal onSave={handleCreateMatch} onCancel={() => setShowCreateModal(false)} />}
-      {showEditModal && <MatchModal initialData={selectedMatch} onSave={handleEditMatch} onCancel={() => setShowEditModal(false)} />}
-      {showShotModal && <ShotOutcomeModal position={{ x: showShotModal.x, y: showShotModal.y }} onSelect={handleShotOutcome} onCancel={() => setShowShotModal(null)} />}
+      {activeEventData && (
+        <HighlightModal 
+          tool={tool}
+          teamSheet={teamSheet}
+          onSave={handleSaveEvent}
+          onCancel={() => setActiveEventData(null)}
+        />
+      )}
+
+      {showCreateModal && (
+        <MatchModal
+          onSave={handleCreateMatch}
+          onCancel={() => setShowCreateModal(false)}
+        />
+      )}
+
+      {showEditModal && selectedMatch && (
+        <MatchModal
+          initialData={selectedMatch}
+          onSave={handleEditMatch}
+          onCancel={() => setShowEditModal(false)}
+        />
+      )}
+
+      <style jsx>{`
+        .timeline-row:hover {
+          background: #eee;
+        }
+      `}</style>
     </div>
   );
 }

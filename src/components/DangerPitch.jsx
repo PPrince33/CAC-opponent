@@ -6,14 +6,15 @@ export default function DangerPitch({
   title = "DANGER MAP",
   events = [],
   teamSheet = [],
+  onEventClick = null, // Callback for video seeking
 }) {
   const [hoveredEvent, setHoveredEvent] = useState(null);
   const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
 
-  const getPlayerName = (id) => {
-    if (!id) return "Unknown";
+  const getPlayerInfo = (id) => {
+    if (!id) return { name: "Unknown", jersey: "#?" };
     const p = teamSheet.find(ts => ts.id === id);
-    return p ? `${p.jersey_number} ${p.player_name}` : "Unknown";
+    return p ? { name: p.player_name, jersey: `#${p.jersey_number}` } : { name: "Unknown", jersey: "#?" };
   };
 
   const handleMouseMove = (e, ev) => {
@@ -106,17 +107,17 @@ export default function DangerPitch({
                 onMouseEnter={(e) => handleMouseMove(e, ev)}
                 onMouseLeave={handleMouseLeave}
                 onMouseMove={(e) => handleMouseMove(e, ev)}
+                onClick={() => onEventClick && onEventClick(ev)}
                 style={{ cursor: "pointer" }}
               >
-                <circle cx={ev.start_x} cy={ev.start_y} r="1.2" fill={color} stroke="#000" strokeWidth="0.3" />
+                <circle cx={ev.start_x} cy={ev.start_y} r="1.4" fill={color} stroke="#000" strokeWidth="0.4" />
                 {isPass && ev.end_x != null && ev.end_y != null && (
                   <>
                     <line 
                       x1={ev.start_x} y1={ev.start_y} 
                       x2={ev.end_x} y2={ev.end_y} 
-                      stroke={color} strokeWidth="0.6" strokeDasharray="1,1" 
+                      stroke={color} strokeWidth="0.8" strokeDasharray="1,1" 
                     />
-                    {/* Arrow head */}
                     <circle cx={ev.end_x} cy={ev.end_y} r="0.6" fill={color} />
                   </>
                 )}
@@ -131,27 +132,44 @@ export default function DangerPitch({
               position: "fixed",
               top: mousePos.y + 15,
               left: mousePos.x + 15,
-              background: "#000",
-              color: "#fff",
-              padding: "8px 12px",
-              border: "2px solid #fff",
-              fontSize: "0.75rem",
-              fontWeight: 700,
-              zIndex: 100,
+              background: "#FACC15", // Premium Yellow
+              color: "#000",
+              padding: "10px 14px",
+              border: "3px solid #000",
+              fontSize: "0.7rem",
+              fontWeight: 800,
+              zIndex: 1000,
               pointerEvents: "none",
               boxShadow: "4px 4px 0px 0px rgba(0,0,0,1)",
-              minWidth: 150
+              minWidth: 180
             }}
           >
-            <div style={{ color: "#FACC15", marginBottom: 4, textTransform: "uppercase" }}>
-              {hoveredEvent.event_type.replace('_', ' ')}
+            <div style={{ background: "#000", color: "#FACC15", padding: "2px 6px", display: "inline-block", marginBottom: 6, fontSize: "0.6rem" }}>
+              {hoveredEvent.timestamp || "00:00"} {hoveredEvent.event_type.replace('_', ' ').toUpperCase()}
             </div>
-            <div>{getPlayerName(hoveredEvent.action_player_id)}</div>
+            
+            <div style={{ fontSize: "0.85rem", marginBottom: 4 }}>
+              {getPlayerInfo(hoveredEvent.action_player_id).jersey} {getPlayerInfo(hoveredEvent.action_player_id).name}
+            </div>
+
             {hoveredEvent.reaction_player_id && (
-              <div style={{ color: "#aaa" }}>→ {getPlayerName(hoveredEvent.reaction_player_id)}</div>
+              <div style={{ color: "#333", fontSize: "0.75rem" }}>
+                ↳ To: {getPlayerInfo(hoveredEvent.reaction_player_id).jersey} {getPlayerInfo(hoveredEvent.reaction_player_id).name}
+              </div>
             )}
-            <div style={{ fontSize: "0.65rem", marginTop: 4, color: "#666" }}>
-              {hoveredEvent.timestamp || "00:00"}
+
+            {hoveredEvent.shot_outcome && (
+              <div style={{ marginTop: 4, display: "flex", alignItems: "center", gap: 4 }}>
+                <span style={{ 
+                  width: 6, height: 6, borderRadius: "50%", 
+                  background: hoveredEvent.shot_outcome === "goal" ? "#34D399" : "#F87171" 
+                }}></span>
+                <span>OUTCOME: {hoveredEvent.shot_outcome.toUpperCase()}</span>
+              </div>
+            )}
+
+            <div style={{ marginTop: 8, fontSize: "0.55rem", borderTop: "1px solid rgba(0,0,0,0.1)", paddingTop: 4, color: "#444" }}>
+              CLICK TO JUMP VIDEO
             </div>
           </div>
         )}

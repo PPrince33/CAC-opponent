@@ -7,6 +7,7 @@ export default function HighlightTaggerPitch({
   events = [],
   tool = "shot", // 'shot' | 'pass'
   onEventComplete,
+  onEventClick,
 }) {
   const containerRef = useRef(null);
   
@@ -121,12 +122,16 @@ export default function HighlightTaggerPitch({
             const isPass = ev.event_type !== 'shot' && ev.end_x != null && ev.end_y != null;
             const color = ev.team_type === 'focus_team' ? "#34D399" : "#F87171";
             return (
-              <g key={i}>
-                <circle cx={ev.start_x} cy={ev.start_y} r="0.8" fill={color} />
+              <g 
+                key={i} 
+                onClick={(e) => { e.stopPropagation(); onEventClick && onEventClick(ev); }}
+                style={{ cursor: "pointer" }}
+              >
+                <circle cx={ev.start_x} cy={ev.start_y} r="1.2" fill={color} stroke="#000" strokeWidth="0.3" />
                 {isPass && (
                   <>
-                    <line x1={ev.start_x} y1={ev.start_y} x2={ev.end_x} y2={ev.end_y} stroke={color} strokeWidth="0.4" strokeDasharray="1,1" />
-                    <circle cx={ev.end_x} cy={ev.end_y} r="0.5" fill={color} />
+                    <line x1={ev.start_x} y1={ev.start_y} x2={ev.end_x} y2={ev.end_y} stroke={color} strokeWidth="0.6" strokeDasharray="1,1" />
+                    <circle cx={ev.end_x} cy={ev.end_y} r="0.6" fill={color} />
                   </>
                 )}
               </g>
