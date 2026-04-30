@@ -108,11 +108,22 @@ export default function TaggerPage() {
   const logEvent = useCallback(
     async (eventData) => {
       if (!selectedMatchId) return;
+
+      // Try to get time automatically from MP4 video player
+      let currentTime = timestamp;
+      if (videoRef.current) {
+        const time = videoRef.current.currentTime;
+        const m = Math.floor(time / 60).toString().padStart(2, "0");
+        const s = Math.floor(time % 60).toString().padStart(2, "0");
+        currentTime = `${m}:${s}`;
+        setTimestamp(currentTime); // Update the input box to show the grabbed time
+      }
+
       const payload = {
         match_id: selectedMatchId,
         half,
         home_team_direction: direction,
-        timestamp,
+        timestamp: currentTime,
         ...eventData,
       };
       const { data, error } = await supabase
