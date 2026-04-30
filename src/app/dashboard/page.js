@@ -1,10 +1,11 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { supabase } from "@/lib/supabase";
 import { normalizeHighlightEvents } from "@/lib/normalize";
 import DangerPitch from "@/components/DangerPitch";
 import FilterBar from "@/components/FilterBar";
+import YouTube from "react-youtube";
 
 export default function DashboardPage() {
   const [matches, setMatches] = useState([]);
@@ -13,6 +14,9 @@ export default function DashboardPage() {
   const [selectedTeam, setSelectedTeam] = useState("");
   const [selectedMatchIds, setSelectedMatchIds] = useState([]);
   const [loading, setLoading] = useState(true);
+
+  const ytPlayerRef = useRef(null);
+  const videoRef = useRef(null);
 
   // ─── Load all matches ───
   useEffect(() => {
@@ -72,7 +76,6 @@ export default function DashboardPage() {
     })();
   }, [selectedMatchIds]);
 
-  // ─── Toggle match selection ───
   const handleMatchToggle = (matchId) => {
     setSelectedMatchIds((prev) =>
       prev.includes(matchId)
@@ -81,25 +84,61 @@ export default function DashboardPage() {
     );
   };
 
-  // ─── Normalize events (focus team attacks L→R) ───
-  const normalizedHighlights = useMemo(() => {
+  const handleSeek = (timestamp) => {
+    if (!timestamp) return;
+    const parts = timestamp.split(':');
+    if (parts.length < 2) return;
+    const seconds = parseInt(parts[0]) * 60 + parseInt(parts[1]);
+    
+    if (ytPlayerRef.current) {
+      ytPlayerRef.current.seekTo(seconds, true);
+    } else if (videoRef.current) {
+      videoRef.current.currentTime = seconds;
+      videoRef.current.play();
+    }
+  };
+
+  // ─── Normalize events ───
+  const splitHighlights = useMemo(() => {
     if (!selectedTeam) return [];
     const result = [];
     highlightEvents.forEach((ev) => {
       const match = matches.find((m) => m.id === ev.match_id);
       if (!match) return;
+      
       const normalized = normalizeHighlightEvents([ev], selectedTeam, match);
-      result.push(...normalized);
+      normalized.forEach(n => {
+        // Shift "Opponent" actions to left half, "Focus" to right half
+        if (n.team_type === 'opponent') {
+          // Map 0-120 -> 0-60
+          n.start_x = n.start_x / 2;
+          if (n.end_x != null) n.end_x = n.end_x / 2;
+        } else {
+          // Map 0-120 -> 60-120
+          n.start_x = 60 + (n.start_x / 2);
+          if (n.end_x != null) n.end_x = 60 + (n.end_x / 2);
+        }
+        result.push(n);
+      });
     });
     return result;
   }, [highlightEvents, selectedTeam, matches]);
 
-  const dangerCreated = normalizedHighlights.filter(e => e.team_type === "focus_team");
-  const dangerConceded = normalizedHighlights.filter(e => e.team_type === "opponent");
+  // Video for the MOST RECENT selected match
+  const selectedMatch = useMemo(() => {
+    if (selectedMatchIds.length === 0) return null;
+    return matches.find(m => m.id === selectedMatchIds[0]);
+  }, [selectedMatchIds, matches]);
+
+  let youtubeId = null;
+  let videoLink = selectedMatch?.video_link;
+  if (videoLink) {
+    const ytMatch = videoLink.match(/(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|watch\?.+&v=))([^&?]+)/);
+    if (ytMatch) youtubeId = ytMatch[1];
+  }
 
   return (
-    <div style={{ minHeight: "calc(100vh - 80px)" }}>
-      {/* ─── FILTER BAR ─── */}
+    <div style={{ minHeight: "calc(100vh - 80px)", paddingBottom: 100 }}>
       <FilterBar
         teams={teams}
         selectedTeam={selectedTeam}
@@ -109,43 +148,58 @@ export default function DashboardPage() {
         onMatchToggle={handleMatchToggle}
       />
 
-      <div style={{ padding: 16 }}>
+      <div style={{ padding: 16, maxWidth: 1400, margin: "0 auto" }}>
         {loading ? (
-          <div className="brutal-card" style={{ padding: 40, textAlign: "center", fontSize: "0.85rem" }}>
-            LOADING DATA...
-          </div>
+          <div className="brutal-card" style={{ padding: 40, textAlign: "center" }}>LOADING...</div>
         ) : !selectedTeam ? (
-          <div className="brutal-card" style={{ padding: 40, textAlign: "center" }}>
-            <p style={{ fontSize: "1.2rem", fontWeight: 800, marginBottom: 8 }}>
-              SELECT AN OPPONENT
-            </p>
-            <p style={{ fontSize: "0.8rem", color: "#666" }}>
-              USE THE FILTER BAR ABOVE TO CHOOSE A TEAM
-            </p>
-          </div>
+          <div className="brutal-card" style={{ padding: 40, textAlign: "center" }}>SELECT A TEAM ABOVE</div>
         ) : (
-          <>
-            {/* ─── PITCH VISUALIZATIONS (2×2) ─── */}
-            <div
-              style={{
-                display: "grid",
-                gridTemplateColumns: "1fr 1fr",
-                gap: 16,
-              }}
-            >
-              {/* Highlight Maps (Danger Created / Conceded) */}
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+            {/* Left: Pitch Map */}
+            <div>
               <DangerPitch
-                title={`⚔️ ${selectedTeam} — DANGER CREATED`}
-                events={dangerCreated}
+                title={`📊 ${selectedTeam} ANALYSIS (LEFT: AGAINST | RIGHT: FOR)`}
+                events={splitHighlights}
                 teamSheet={teamSheets}
-              />
-              <DangerPitch
-                title={`🛡️ ${selectedTeam} — DANGER CONCEDED`}
-                events={dangerConceded}
-                teamSheet={teamSheets}
+                onEventClick={(ev) => handleSeek(ev.timestamp)}
               />
             </div>
-          </>
+
+            {/* Right: Video Player & Info */}
+            <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+               <div className="brutal-card" style={{ overflow: "hidden" }}>
+                  <div style={{ background: "#000", color: "#fff", padding: "8px 12px", fontWeight: 800, fontSize: "0.75rem", display: "flex", justifyContent: "space-between" }}>
+                    <span>📹 VIDEO REPLAY</span>
+                    {selectedMatch && <span style={{ color: "#FACC15" }}>{selectedMatch.home_team} VS {selectedMatch.away_team}</span>}
+                  </div>
+                  <div style={{ aspectRatio: "16/9", background: "#111", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                    {selectedMatchIds.length === 0 ? (
+                      <p style={{ color: "#666", fontSize: "0.7rem" }}>SELECT A MATCH TO WATCH</p>
+                    ) : youtubeId ? (
+                      <YouTube
+                        videoId={youtubeId}
+                        opts={{ width: "100%", height: "100%", playerVars: { autoplay: 0, rel: 0, modestbranding: 1 } }}
+                        onReady={(e) => { ytPlayerRef.current = e.target; }}
+                        style={{ width: "100%", height: "100%" }}
+                      />
+                    ) : videoLink ? (
+                      <video ref={videoRef} src={videoLink} controls style={{ width: "100%", height: "100%" }} />
+                    ) : (
+                      <p style={{ color: "#666", fontSize: "0.7rem" }}>NO VIDEO LINK</p>
+                    )}
+                  </div>
+               </div>
+
+               <div className="brutal-card" style={{ padding: 12 }}>
+                  <h4 style={{ margin: "0 0 8px 0", fontSize: "0.8rem" }}>HOW TO USE:</h4>
+                  <p style={{ fontSize: "0.7rem", margin: 0, color: "#666" }}>
+                    • Click on any event on the pitch map to jump the video to that moment.<br/>
+                    • The <b>LEFT HALF</b> of the pitch shows danger conceded (against {selectedTeam}).<br/>
+                    • The <b>RIGHT HALF</b> shows danger created (by {selectedTeam}).
+                  </p>
+               </div>
+            </div>
+          </div>
         )}
       </div>
     </div>
