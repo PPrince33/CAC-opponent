@@ -367,7 +367,7 @@ export default function DashboardPage() {
             <div style={{ color: "#666", fontSize: "0.8rem", marginTop: 6 }}>Tag highlights then click <b>✓ FINISH HIGHLIGHT</b> in the Tagger.</div>
           </div>
         ) : (
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 400px", gap: 16, alignItems: "start" }}>
+          <div className="dashboard-grid">
 
             {/* LEFT: PITCH */}
             <div>
@@ -433,7 +433,7 @@ export default function DashboardPage() {
             </div>
 
             {/* RIGHT: VIDEO + LOG */}
-            <div style={{ display: "flex", flexDirection: "column", gap: 10, height: "calc(100vh - 140px)", position: "sticky", top: 12 }}>
+            <div className="dashboard-right-col">
               <div className="brutal-card" style={{ overflow: "hidden", flexShrink: 0 }}>
                 <div style={{ background: "#000", color: "#fff", padding: "6px 12px", fontWeight: 800, fontSize: "0.7rem", display: "flex", justifyContent: "space-between" }}>
                   <span>📹 VIDEO</span>

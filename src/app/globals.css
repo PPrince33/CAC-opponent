@@ -207,3 +207,31 @@ body {
 .heat-7 { background: rgba(248, 113, 113, 0.8); }
 .heat-8 { background: rgba(248, 113, 113, 0.9); }
 .heat-9 { background: rgba(220, 38, 38, 0.95); }
+
+/* ─── RESPONSIVE LAYOUTS ─── */
+.dashboard-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 16px;
+  align-items: start;
+}
+
+.dashboard-right-col {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  /* On mobile, give it a fixed height so the event log can scroll */
+  height: 80vh;
+}
+
+@media (min-width: 1024px) {
+  .dashboard-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+  .dashboard-right-col {
+    height: calc(100vh - 140px);
+    position: sticky;
+    top: 12px;
+  }
+}
+

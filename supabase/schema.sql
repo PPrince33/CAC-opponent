@@ -259,3 +259,57 @@ CREATE POLICY "norm_select_open"  ON normalized_highlight_events FOR SELECT USIN
 CREATE POLICY "norm_insert_auth"  ON normalized_highlight_events FOR INSERT WITH CHECK (auth.uid() IS NOT NULL);
 CREATE POLICY "norm_delete_auth"  ON normalized_highlight_events FOR DELETE USING (auth.uid() IS NOT NULL);
 
+-- ────────────────────────────────────────────────────────────
+-- 6. DATA NORMALIZATION TRIGGERS
+-- ────────────────────────────────────────────────────────────
+-- Enforce uppercase for team names and player names to ensure
+-- case-insensitive matching always works on the frontend.
+
+-- Uppercase opp_matches
+CREATE OR REPLACE FUNCTION uppercase_opp_matches()
+RETURNS TRIGGER AS $$
+BEGIN
+  NEW.home_team = UPPER(TRIM(NEW.home_team));
+  NEW.away_team = UPPER(TRIM(NEW.away_team));
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS trig_uppercase_opp_matches ON opp_matches;
+CREATE TRIGGER trig_uppercase_opp_matches
+BEFORE INSERT OR UPDATE ON opp_matches
+FOR EACH ROW EXECUTE FUNCTION uppercase_opp_matches();
+
+-- Uppercase team_sheets
+CREATE OR REPLACE FUNCTION uppercase_team_sheets()
+RETURNS TRIGGER AS $$
+BEGIN
+  NEW.team_name = UPPER(TRIM(NEW.team_name));
+  NEW.player_name = UPPER(TRIM(NEW.player_name));
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS trig_uppercase_team_sheets ON team_sheets;
+CREATE TRIGGER trig_uppercase_team_sheets
+BEFORE INSERT OR UPDATE ON team_sheets
+FOR EACH ROW EXECUTE FUNCTION uppercase_team_sheets();
+
+-- Uppercase normalized_highlight_events
+CREATE OR REPLACE FUNCTION uppercase_norm_events()
+RETURNS TRIGGER AS $$
+BEGIN
+  IF NEW.opponent_team IS NOT NULL THEN
+    NEW.opponent_team = UPPER(TRIM(NEW.opponent_team));
+  END IF;
+  IF NEW.action_team IS NOT NULL THEN
+    NEW.action_team = UPPER(TRIM(NEW.action_team));
+  END IF;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS trig_uppercase_norm_events ON normalized_highlight_events;
+CREATE TRIGGER trig_uppercase_norm_events
+BEFORE INSERT OR UPDATE ON normalized_highlight_events
+FOR EACH ROW EXECUTE FUNCTION uppercase_norm_events();
