@@ -7,6 +7,7 @@ import YouTube from "react-youtube";
 import HighlightTaggerPitch from "@/components/HighlightTaggerPitch";
 import TeamSheetManager from "@/components/TeamSheetManager";
 import MatchModal from "@/components/MatchModal";
+import { normalizeHighlightEventV2 } from "@/lib/normalize";
 
 export default function TaggerPage() {
   const [matches, setMatches] = useState([]);
@@ -23,7 +24,7 @@ export default function TaggerPage() {
 
   // Form state for inline tagging
   const [tagForm, setTagForm] = useState({
-    team_type: "focus_team",
+    action_team: "",      // Real team name e.g. "Arsenal"
     event_type: "shot",
     action_player_id: "",
     reaction_player_id: "",
@@ -33,6 +34,8 @@ export default function TaggerPage() {
     goal_x: null,
     goal_y: null
   });
+
+  const [finishLoading, setFinishLoading] = useState(false);
 
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
@@ -114,6 +117,8 @@ export default function TaggerPage() {
     }
     const match = matches.find((m) => m.id === selectedMatchId);
     setSelectedMatch(match);
+    // Default action_team to away team (the scouted opponent)
+    setTagForm(f => ({ ...f, action_team: match?.away_team || "" }));
     
     supabase.from("highlight_events").select("*").eq("match_id", selectedMatchId).order("created_at", { ascending: true })
       .then(({ data }) => setEvents(data || []));
@@ -168,6 +173,64 @@ export default function TaggerPage() {
     }
   }, [selectedMatchId, activeEventData, timestamp, direction, tagForm, ytPlayerRef, videoRef]);
 
+  // ─── Finish Highlight: Normalize and push to normalized_highlight_events ───
+  const handleFinishHighlight = async () => {
+    if (!selectedMatchId || !selectedMatch) return;
+    const scoutedTeam = selectedMatch.away_team; // The opponent team being scouted
+    setFinishLoading(true);
+    try {
+      // 1. Fetch all raw events for this match
+      const { data: rawEvents, error: fetchErr } = await supabase
+        .from("highlight_events")
+        .select("*")
+        .eq("match_id", selectedMatchId);
+
+      if (fetchErr) throw fetchErr;
+
+      // 2. Delete existing normalized events for this match (re-processable)
+      await supabase
+        .from("normalized_highlight_events")
+        .delete()
+        .eq("match_id", selectedMatchId);
+
+      // 3. Normalize each event
+      const normalized = (rawEvents || []).map(ev => {
+        const norm = normalizeHighlightEventV2(ev, scoutedTeam, selectedMatch);
+        return {
+          source_event_id:  ev.id,
+          match_id:         ev.match_id,
+          opponent_team:    scoutedTeam,
+          timestamp:        ev.timestamp,
+          event_type:       ev.event_type,
+          action_team:      ev.action_team,
+          start_x:          norm.start_x,
+          start_y:          norm.start_y,
+          end_x:            norm.end_x,
+          end_y:            norm.end_y,
+          shot_outcome:     ev.shot_outcome,
+          body_part:        ev.body_part,
+          half:             ev.half,
+          action_player_id: ev.action_player_id,
+          video_link:       selectedMatch.video_link,
+        };
+      });
+
+      // 4. Insert normalized events
+      if (normalized.length > 0) {
+        const { error: insertErr } = await supabase
+          .from("normalized_highlight_events")
+          .insert(normalized);
+        if (insertErr) throw insertErr;
+      }
+
+      alert(`✅ Finished! ${normalized.length} events normalized for ${scoutedTeam}.`);
+    } catch (err) {
+      alert(`❌ Error: ${err.message}`);
+    } finally {
+      setFinishLoading(false);
+    }
+  };
+
   const handleDeleteEvent = async (id) => {
     const { error } = await supabase.from("highlight_events").delete().eq("id", id);
     if (!error) setEvents((prev) => prev.filter((ev) => ev.id !== id));
@@ -196,7 +259,7 @@ export default function TaggerPage() {
 
   const filteredEvents = useMemo(() => {
     return events.filter(ev => {
-      if (filterTeam !== "all" && ev.team_type !== filterTeam) return false;
+      if (filterTeam !== "all" && ev.action_team !== filterTeam) return false;
       if (filterPlayer !== "all" && ev.action_player_id !== filterPlayer) return false;
       if (filterAction !== "all" && ev.event_type !== filterAction) return false;
       if (filterOutcome !== "all") {
@@ -229,6 +292,16 @@ export default function TaggerPage() {
         </div>
         <button onClick={() => setShowCreateModal(true)} className="brutal-btn" style={{ background: "#000", color: "#FACC15", fontSize: "0.75rem" }}>+ NEW MATCH</button>
         <div style={{ marginLeft: "auto", display: "flex", gap: 8, alignItems: "center" }}>
+          {selectedMatchId && (
+            <button
+              onClick={handleFinishHighlight}
+              disabled={finishLoading}
+              className="brutal-btn"
+              style={{ background: finishLoading ? "#666" : "#EF4444", color: "#fff", fontSize: "0.75rem", fontWeight: 900 }}
+            >
+              {finishLoading ? "PROCESSING..." : "✓ FINISH HIGHLIGHT"}
+            </button>
+          )}
           <div style={{ display: "flex", gap: 0 }}>
             {["L2R", "R2L"].map((d) => (
               <button key={d} onClick={() => setDirection(d)} className="brutal-btn" style={{ background: direction === d ? "#000" : "#fff", color: direction === d ? "#34D399" : "#000", fontSize: "0.75rem", padding: "6px 14px" }}>
@@ -279,17 +352,17 @@ export default function TaggerPage() {
               <div style={{ marginBottom: 12 }}>
                 <label style={{ fontSize: "0.6rem", fontWeight: 800, color: "#666" }}>1. TEAM & PLAYER</label>
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 2fr", gap: 6, marginTop: 4 }}>
-                  <select className="brutal-select" style={{ fontSize: "0.65rem", padding: "4px" }} value={tagForm.team_type} onChange={e => setTagForm({...tagForm, team_type: e.target.value})}>
-                    <option value="focus_team">{selectedMatch?.home_team?.substring(0, 10).toUpperCase()}</option>
-                    <option value="opponent">{selectedMatch?.away_team?.substring(0, 10).toUpperCase()}</option>
+                  <select className="brutal-select" style={{ fontSize: "0.65rem", padding: "4px" }} value={tagForm.action_team} onChange={e => setTagForm({...tagForm, action_team: e.target.value})}>
+                    <option value="">— TEAM —</option>
+                    {selectedMatch && [
+                      <option key="home" value={selectedMatch.home_team}>{selectedMatch.home_team.toUpperCase()}</option>,
+                      <option key="away" value={selectedMatch.away_team}>{selectedMatch.away_team.toUpperCase()}</option>
+                    ]}
                   </select>
                   <select className="brutal-select" style={{ fontSize: "0.65rem", padding: "4px" }} value={tagForm.action_player_id} onChange={e => setTagForm({...tagForm, action_player_id: e.target.value})}>
                     <option value="">— SELECT PLAYER —</option>
                     {teamSheet
-                      .filter(p => {
-                        const targetTeam = tagForm.team_type === "focus_team" ? selectedMatch?.home_team : selectedMatch?.away_team;
-                        return p.team_name === targetTeam;
-                      })
+                      .filter(p => !tagForm.action_team || p.team_name === tagForm.action_team)
                       .map(p => (<option key={p.id} value={p.id}>{p.jersey_number} {p.player_name.toUpperCase()}</option>))}
                   </select>
                 </div>
@@ -320,10 +393,7 @@ export default function TaggerPage() {
                     <select className="brutal-select" style={{ fontSize: "0.65rem", padding: "4px" }} value={tagForm.reaction_player_id} onChange={e => setTagForm({...tagForm, reaction_player_id: e.target.value})}>
                       <option value="">— TARGET —</option>
                       {teamSheet
-                        .filter(p => {
-                          const targetTeam = tagForm.team_type === "focus_team" ? selectedMatch?.home_team : selectedMatch?.away_team;
-                          return p.team_name === targetTeam;
-                        })
+                        .filter(p => !tagForm.action_team || p.team_name === tagForm.action_team)
                         .map(p => (<option key={p.id} value={p.id}>{p.jersey_number} {p.player_name.toUpperCase()}</option>))}
                     </select>
                   )}
@@ -380,7 +450,13 @@ export default function TaggerPage() {
         <div style={{ background: "#000", color: "#fff", padding: "8px 12px", fontWeight: 800, fontSize: "0.75rem", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
           <span>📋 EVENT TIMELINE</span>
           <div style={{ display: "flex", gap: 8 }}>
-             <select className="brutal-select" style={{ fontSize: "0.6rem", padding: "2px 8px", background: "#fff", color: "#000" }} value={filterTeam} onChange={e => setFilterTeam(e.target.value)}><option value="all">ALL TEAMS</option><option value="focus_team">HOME</option><option value="opponent">AWAY</option></select>
+             <select className="brutal-select" style={{ fontSize: "0.6rem", padding: "2px 8px", background: "#fff", color: "#000" }} value={filterTeam} onChange={e => setFilterTeam(e.target.value)}>
+               <option value="all">ALL TEAMS</option>
+               {selectedMatch && <>
+                 <option value={selectedMatch.home_team}>{selectedMatch.home_team}</option>
+                 <option value={selectedMatch.away_team}>{selectedMatch.away_team}</option>
+               </>}
+             </select>
              <select className="brutal-select" style={{ fontSize: "0.6rem", padding: "2px 8px", background: "#fff", color: "#000" }} value={filterPlayer} onChange={e => setFilterPlayer(e.target.value)}><option value="all">ALL PLAYERS</option>{teamSheet.map(p => (<option key={p.id} value={p.id}>{p.jersey_number} {p.player_name}</option>))}</select>
              <select className="brutal-select" style={{ fontSize: "0.6rem", padding: "2px 8px", background: "#fff", color: "#000" }} value={filterAction} onChange={e => setFilterAction(e.target.value)}><option value="all">ALL ACTIONS</option><option value="shot">SHOTS</option><option value="key_pass">KEY PASSES</option><option value="assist">ASSISTS</option></select>
              <select className="brutal-select" style={{ fontSize: "0.6rem", padding: "2px 8px", background: "#fff", color: "#000" }} value={filterOutcome} onChange={e => setFilterOutcome(e.target.value)}><option value="all">ALL OUTCOMES</option><option value="goal">GOALS</option><option value="miss">OTHER</option></select>
@@ -396,7 +472,7 @@ export default function TaggerPage() {
                 return (
                   <tr key={ev.id} onClick={() => handleSeek(ev)} className="timeline-row" style={{ borderBottom: "1px solid #eee", cursor: "pointer", background: isSelected ? "#f0fdf4" : "transparent" }}>
                     <td style={{ padding: "12px 16px", fontWeight: 800 }}>{ev.timestamp || "0'"}</td>
-                    <td style={{ padding: "12px 16px" }}><div style={{ width: 10, height: 10, borderRadius: "50%", background: ev.team_type === 'focus_team' ? '#34D399' : '#F87171' }}></div></td>
+                    <td style={{ padding: "12px 16px" }}><div style={{ width: 10, height: 10, borderRadius: "50%", background: ev.action_team === selectedMatch?.away_team ? '#34D399' : '#F87171' }}></div></td>
                     <td style={{ padding: "12px 16px", fontWeight: 600 }}>{player ? `${player.jersey_number} ${player.player_name.toUpperCase()}` : "—"}</td>
                     <td style={{ padding: "12px 16px" }}>{ev.event_type.replace("_", " ").toUpperCase()}</td>
                     <td style={{ padding: "12px 16px", fontWeight: 700, color: ev.shot_outcome === "goal" ? "#34D399" : "#000" }}>{ev.shot_outcome ? ev.shot_outcome.toUpperCase() : "SUCCESSFUL"}</td>

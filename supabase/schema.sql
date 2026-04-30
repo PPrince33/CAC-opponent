@@ -222,3 +222,39 @@ CREATE POLICY "highlight_events_select_open" ON highlight_events FOR SELECT USIN
 CREATE POLICY "highlight_events_insert_auth" ON highlight_events FOR INSERT WITH CHECK (auth.uid() IS NOT NULL);
 CREATE POLICY "highlight_events_update_auth" ON highlight_events FOR UPDATE USING (auth.uid() IS NOT NULL);
 CREATE POLICY "highlight_events_delete_auth" ON highlight_events FOR DELETE USING (auth.uid() IS NOT NULL);
+
+-- ────────────────────────────────────────────────────────────
+-- 5. NORMALIZED HIGHLIGHT EVENTS (L2R perspective)
+-- ────────────────────────────────────────────────────────────
+-- Populated by clicking "Finish Highlight" in the tagger.
+-- All coordinates are normalized so the OPPONENT team (being scouted)
+-- always attacks Left → Right.
+
+CREATE TABLE IF NOT EXISTS normalized_highlight_events (
+  id                UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  source_event_id   UUID REFERENCES highlight_events(id) ON DELETE CASCADE,
+  match_id          UUID NOT NULL REFERENCES opp_matches(id) ON DELETE CASCADE,
+  opponent_team     TEXT,
+  timestamp         TEXT,
+  event_type        TEXT,
+  team_type         TEXT,
+  start_x           FLOAT,
+  start_y           FLOAT,
+  end_x             FLOAT,
+  end_y             FLOAT,
+  shot_outcome      TEXT,
+  body_part         TEXT,
+  half              TEXT,
+  action_player_id  UUID,
+  video_link        TEXT,
+  created_at        TIMESTAMPTZ DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_norm_events_match ON normalized_highlight_events(match_id);
+CREATE INDEX IF NOT EXISTS idx_norm_events_opponent ON normalized_highlight_events(opponent_team);
+
+ALTER TABLE normalized_highlight_events ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "norm_select_open"  ON normalized_highlight_events FOR SELECT USING (true);
+CREATE POLICY "norm_insert_auth"  ON normalized_highlight_events FOR INSERT WITH CHECK (auth.uid() IS NOT NULL);
+CREATE POLICY "norm_delete_auth"  ON normalized_highlight_events FOR DELETE USING (auth.uid() IS NOT NULL);
+
