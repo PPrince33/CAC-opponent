@@ -224,11 +224,10 @@ export default function TaggerPage() {
         .eq("match_id", selectedMatchId);
 
       // 3. Normalize each event
-      // Raw events are already stored as L2R for acting team.
-      // normalizeHighlightEventV2 flips non-scouted teams to R2L.
+      // Raw events are already stored as L2R (tagger flips at save time).
+      // All normalized events are L2R. Color in dashboard = green/red by action_team.
       const normalized = (rawEvents || []).map(ev => {
-        const norm = normalizeHighlightEventV2(ev, scoutedTeam);
-        const isScoutedTeam = ev.action_team === scoutedTeam;
+        const norm = normalizeHighlightEventV2(ev); // no-op, already L2R
         return {
           source_event_id:  ev.id,
           match_id:         ev.match_id,
@@ -236,7 +235,7 @@ export default function TaggerPage() {
           timestamp:        ev.timestamp,
           event_type:       ev.event_type,
           action_team:      ev.action_team,
-          direction:        isScoutedTeam ? 'L2R' : 'R2L', // scouted team = L2R, opposition = R2L
+          direction:        'L2R', // ALL normalized events are L2R
           start_x:          norm.start_x,
           start_y:          norm.start_y,
           end_x:            norm.end_x,

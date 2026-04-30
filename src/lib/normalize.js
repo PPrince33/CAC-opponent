@@ -1,30 +1,19 @@
 /**
- * Normalization V2 — Simple rules:
+ * Normalization V2 — All events stored as L2R.
  *
- * RAW EVENTS (highlight_events): ALL stored as L2R for the acting team.
- * The tagger flips coordinates before saving if direction is R2L.
+ * The tagger already flips coordinates to L2R at save time (if direction was R2L).
+ * So raw events in highlight_events are ALL L2R for the acting team.
  *
- * NORMALIZED EVENTS (normalized_highlight_events):
- *   - action_team === scoutedTeam  → keep L2R (scouted opponent always attacks L→R)
- *   - action_team !== scoutedTeam  → flip to R2L (opposition attacks R→L)
+ * Normalization simply copies them into normalized_highlight_events with direction='L2R'.
+ * Dashboard colors distinguish teams (green=next opponent, red=others) — both L2R.
  */
-export function normalizeHighlightEventV2(event, scoutedTeam) {
-  const isScoutedTeam = event.action_team === scoutedTeam;
-
-  // Scouted team: already L2R — no change
-  if (isScoutedTeam) return { ...event };
-
-  // Opposition: flip to R2L
-  const n = { ...event };
-  if (n.start_x != null) n.start_x = 120 - n.start_x;
-  if (n.start_y != null) n.start_y = 80  - n.start_y;
-  if (n.end_x   != null) n.end_x   = 120 - n.end_x;
-  if (n.end_y   != null) n.end_y   = 80  - n.end_y;
-  return n;
+export function normalizeHighlightEventV2(event) {
+  // Already L2R from tagger — no flipping needed
+  return { ...event };
 }
 
-export function normalizeHighlightEventsV2(events, scoutedTeam) {
-  return events.map(e => normalizeHighlightEventV2(e, scoutedTeam));
+export function normalizeHighlightEventsV2(events) {
+  return events.map(e => normalizeHighlightEventV2(e));
 }
 
 // ─── Legacy functions (kept for backward compat) ──────────────────────────────
