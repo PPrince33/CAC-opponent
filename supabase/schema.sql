@@ -157,3 +157,63 @@ SELECT
 
 FROM opp_raw_events e
 JOIN opp_matches m ON m.id = e.match_id;
+
+
+-- ────────────────────────────────────────────────────────────
+-- 4. HIGHLIGHTS WORKFLOW TABLES
+-- ────────────────────────────────────────────────────────────
+
+CREATE TABLE IF NOT EXISTS team_sheets (
+  id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  match_id        UUID NOT NULL REFERENCES opp_matches(id) ON DELETE CASCADE,
+  team_name       TEXT NOT NULL,
+  player_name     TEXT NOT NULL,
+  jersey_number   TEXT,
+  position        TEXT,
+  created_at      TIMESTAMPTZ DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_team_sheets_match ON team_sheets(match_id);
+
+CREATE TABLE IF NOT EXISTS highlight_events (
+  id                  UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  match_id            UUID NOT NULL REFERENCES opp_matches(id) ON DELETE CASCADE,
+  timestamp           TEXT,
+  home_team_direction TEXT CHECK (home_team_direction IN ('L2R', 'R2L')),
+  team_type           TEXT CHECK (team_type IN ('focus_team', 'opponent')),
+  event_type          TEXT NOT NULL CHECK (event_type IN ('key_pass', 'assist', 'shot')),
+  start_x             FLOAT,
+  start_y             FLOAT,
+  end_x               FLOAT,
+  end_y               FLOAT,
+  action_player_id    UUID REFERENCES team_sheets(id) ON DELETE SET NULL,
+  reaction_player_id  UUID REFERENCES team_sheets(id) ON DELETE SET NULL,
+  shot_outcome        TEXT CHECK (shot_outcome IN ('miss', 'target', 'goal') OR shot_outcome IS NULL),
+  created_at          TIMESTAMPTZ DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_highlight_events_match ON highlight_events(match_id);
+
+-- ROW LEVEL SECURITY
+ALTER TABLE team_sheets ENABLE ROW LEVEL SECURITY;
+ALTER TABLE highlight_events ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "team_sheets_select_open" ON team_sheets;
+DROP POLICY IF EXISTS "team_sheets_insert_auth" ON team_sheets;
+DROP POLICY IF EXISTS "team_sheets_update_auth" ON team_sheets;
+DROP POLICY IF EXISTS "team_sheets_delete_auth" ON team_sheets;
+
+CREATE POLICY "team_sheets_select_open" ON team_sheets FOR SELECT USING (true);
+CREATE POLICY "team_sheets_insert_auth" ON team_sheets FOR INSERT WITH CHECK (auth.uid() IS NOT NULL);
+CREATE POLICY "team_sheets_update_auth" ON team_sheets FOR UPDATE USING (auth.uid() IS NOT NULL);
+CREATE POLICY "team_sheets_delete_auth" ON team_sheets FOR DELETE USING (auth.uid() IS NOT NULL);
+
+DROP POLICY IF EXISTS "highlight_events_select_open" ON highlight_events;
+DROP POLICY IF EXISTS "highlight_events_insert_auth" ON highlight_events;
+DROP POLICY IF EXISTS "highlight_events_update_auth" ON highlight_events;
+DROP POLICY IF EXISTS "highlight_events_delete_auth" ON highlight_events;
+
+CREATE POLICY "highlight_events_select_open" ON highlight_events FOR SELECT USING (true);
+CREATE POLICY "highlight_events_insert_auth" ON highlight_events FOR INSERT WITH CHECK (auth.uid() IS NOT NULL);
+CREATE POLICY "highlight_events_update_auth" ON highlight_events FOR UPDATE USING (auth.uid() IS NOT NULL);
+CREATE POLICY "highlight_events_delete_auth" ON highlight_events FOR DELETE USING (auth.uid() IS NOT NULL);

@@ -43,3 +43,54 @@ export function normalizeEvent(event, focusTeam, match) {
 export function normalizeEvents(events, focusTeam, match) {
   return events.map((e) => normalizeEvent(e, focusTeam, match));
 }
+
+/**
+ * Normalize highlight events for the Danger Map.
+ * CRITICAL RULE: Focus Team always attacks Left → Right (L2R).
+ *
+ * @param {Object} event     - Raw event from highlight_events
+ * @param {string} focusTeam - The team we are scouting
+ * @param {Object} match     - The match record
+ */
+export function normalizeHighlightEvent(event, focusTeam, match) {
+  const isFocusTeamHome = match.home_team === focusTeam;
+  const originalDir = isFocusTeamHome
+    ? event.home_team_direction
+    : event.home_team_direction === "L2R"
+    ? "R2L"
+    : "L2R";
+
+  const isFocusTeamEvent = event.team_type === "focus_team";
+  let needsMirror = false;
+
+  if (originalDir === "L2R") {
+    // Focus team originally L2R: Focus stays same, Opponent mirrors
+    needsMirror = !isFocusTeamEvent;
+  } else {
+    // Focus team originally R2L: Focus mirrors, Opponent stays same
+    needsMirror = isFocusTeamEvent;
+  }
+
+  if (!needsMirror) return { ...event };
+
+  const normalized = { ...event };
+
+  if (normalized.start_x != null) {
+    normalized.start_x = 120 - normalized.start_x;
+  }
+  if (normalized.start_y != null) {
+    normalized.start_y = 80 - normalized.start_y;
+  }
+  if (normalized.end_x != null) {
+    normalized.end_x = 120 - normalized.end_x;
+  }
+  if (normalized.end_y != null) {
+    normalized.end_y = 80 - normalized.end_y;
+  }
+
+  return normalized;
+}
+
+export function normalizeHighlightEvents(events, focusTeam, match) {
+  return events.map((e) => normalizeHighlightEvent(e, focusTeam, match));
+}
