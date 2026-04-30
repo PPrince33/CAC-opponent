@@ -422,14 +422,25 @@ export default function TaggerPage() {
                   </select>
                   <select className="brutal-select" style={{ fontSize: "0.65rem", padding: "4px" }} value={tagForm.action_player_id} onChange={e => setTagForm({...tagForm, action_player_id: e.target.value})}>
                     <option value="">— SELECT PLAYER —</option>
-                    {teamSheet
-                      .filter(p => !tagForm.action_team || p.team_name?.toUpperCase() === tagForm.action_team?.toUpperCase())
-                      .map(p => <option key={p.id} value={p.id}>{p.jersey_number} {p.player_name?.toUpperCase()}</option>)}
-                    {/* Fallback: if no match show all players with team label */}
-                    {tagForm.action_team && teamSheet.filter(p => p.team_name?.toUpperCase() === tagForm.action_team?.toUpperCase()).length === 0 &&
-                      teamSheet.map(p => <option key={p.id} value={p.id}>[{p.team_name}] {p.jersey_number} {p.player_name?.toUpperCase()}</option>)
-                    }
+                    {(() => {
+                      // Smart team match: handles full names, abbreviations, and partial names
+                      const matchTeam = (pTeam, aTeam) => {
+                        if (!aTeam) return true;
+                        const p = (pTeam || '').toUpperCase().trim();
+                        const a = aTeam.toUpperCase().trim();
+                        return p === a || a.startsWith(p) || p.startsWith(a) || a.includes(p) || p.includes(a);
+                      };
+                      const filtered = teamSheet.filter(p => matchTeam(p.team_name, tagForm.action_team));
+                      // Fallback: show all match players if nothing matched
+                      const list = filtered.length > 0 ? filtered : teamSheet;
+                      return list.map(p => (
+                        <option key={p.id} value={p.id}>
+                          {filtered.length === 0 ? `[${p.team_name}] ` : ''}{p.jersey_number} {p.player_name?.toUpperCase()}
+                        </option>
+                      ));
+                    })()}
                   </select>
+
                 </div>
               </div>
 
