@@ -128,8 +128,26 @@ export default function TaggerPage() {
     supabase.from("highlight_events").select("*").eq("match_id", selectedMatchId).order("created_at", { ascending: true })
       .then(({ data }) => setEvents(data || []));
 
+    // Load team sheet initially
     supabase.from("team_sheets").select("*").eq("match_id", selectedMatchId)
       .then(({ data }) => setTeamSheet(data || []));
+
+    // Real-time subscription: update teamSheet whenever a player is added/changed/removed
+    const channel = supabase
+      .channel(`team_sheets_${selectedMatchId}`)
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "team_sheets", filter: `match_id=eq.${selectedMatchId}` },
+        () => {
+          // Re-fetch full list on any change
+          supabase.from("team_sheets").select("*").eq("match_id", selectedMatchId)
+            .then(({ data }) => setTeamSheet(data || []));
+        }
+      )
+      .subscribe();
+
+    // Cleanup subscription when match changes
+    return () => { supabase.removeChannel(channel); };
   }, [selectedMatchId, matches]);
 
   const handlePitchInteraction = (startX, startY, endX, endY) => {
