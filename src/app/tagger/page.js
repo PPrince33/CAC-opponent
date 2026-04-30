@@ -26,8 +26,8 @@ export default function TaggerPage() {
     event_type: "shot",
     action_player_id: "",
     reaction_player_id: "",
-    shot_outcome: "",
-    body_part: "",
+    shot_outcome: null,
+    body_part: null,
     half: "1st",
     goal_x: null,
     goal_y: null
@@ -163,7 +163,7 @@ export default function TaggerPage() {
     if (data) {
       setEvents((prev) => [...prev, data]);
       setActiveEventData(null);
-      setTagForm(f => ({ ...f, action_player_id: "", reaction_player_id: "", shot_outcome: "", body_part: "", goal_x: null, goal_y: null }));
+      setTagForm(f => ({ ...f, action_player_id: "", reaction_player_id: "", shot_outcome: null, body_part: null, goal_x: null, goal_y: null }));
     }
   }, [selectedMatchId, activeEventData, timestamp, direction, tagForm, ytPlayerRef, videoRef]);
 
@@ -301,7 +301,7 @@ export default function TaggerPage() {
                     <option value="assist">ASSIST</option>
                   </select>
                   {tagForm.event_type === "shot" ? (
-                    <select className="brutal-select" style={{ fontSize: "0.65rem", padding: "4px" }} value={tagForm.shot_outcome} onChange={e => setTagForm({...tagForm, shot_outcome: e.target.value})}>
+                    <select className="brutal-select" style={{ fontSize: "0.65rem", padding: "4px" }} value={tagForm.shot_outcome || ""} onChange={e => setTagForm({...tagForm, shot_outcome: e.target.value || null})}>
                       <option value="">— OUTCOME —</option>
                       <option value="goal">GOAL</option>
                       <option value="target">ON TARGET</option>
@@ -329,7 +329,7 @@ export default function TaggerPage() {
                   {["right_foot", "left_foot", "head"].map(bp => (
                     <button 
                       key={bp} 
-                      onClick={() => setTagForm({...tagForm, body_part: bp})}
+                      onClick={() => setTagForm({...tagForm, body_part: tagForm.body_part === bp ? null : bp})}
                       className="brutal-btn"
                       style={{ 
                         flex: 1, fontSize: "0.55rem", padding: "6px 2px",
