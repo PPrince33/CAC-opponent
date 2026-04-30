@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { supabase } from "@/lib/supabase";
 import { useRouter } from "next/navigation";
 import YouTube from "react-youtube";
@@ -24,6 +24,12 @@ export default function TaggerPage() {
 
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
+
+  // Filters for Timeline
+  const [filterTeam, setFilterTeam] = useState("all");
+  const [filterPlayer, setFilterPlayer] = useState("all");
+  const [filterAction, setFilterAction] = useState("all");
+  const [filterOutcome, setFilterOutcome] = useState("all");
 
   const [loading, setLoading] = useState(false);
   const [authChecked, setAuthChecked] = useState(false);
@@ -186,6 +192,20 @@ export default function TaggerPage() {
     }
   };
 
+  // ─── Filtered Events for Timeline ───
+  const filteredEvents = useMemo(() => {
+    return events.filter(ev => {
+      if (filterTeam !== "all" && ev.team_type !== filterTeam) return false;
+      if (filterPlayer !== "all" && ev.action_player_id !== filterPlayer) return false;
+      if (filterAction !== "all" && ev.event_type !== filterAction) return false;
+      if (filterOutcome !== "all") {
+        if (filterOutcome === "goal" && ev.shot_outcome !== "goal") return false;
+        if (filterOutcome === "miss" && ev.shot_outcome === "goal") return false; // Simple logic
+      }
+      return true;
+    });
+  }, [events, filterTeam, filterPlayer, filterAction, filterOutcome]);
+
   if (!authChecked) return null;
 
   // Video ID logic
@@ -289,9 +309,36 @@ export default function TaggerPage() {
             <div style={{ background: "#000", color: "#fff", padding: "8px 12px", fontWeight: 800, fontSize: "0.75rem" }}>
               📋 EVENT TIMELINE
             </div>
+            
+            {/* TIMELINE FILTERS */}
+            <div style={{ padding: 8, background: "#f9f9f9", borderBottom: "2px solid #000", display: "grid", gridTemplateColumns: "1fr 1fr", gap: 4 }}>
+              <select className="brutal-select" style={{ fontSize: "0.6rem", padding: "2px 4px" }} value={filterTeam} onChange={e => setFilterTeam(e.target.value)}>
+                <option value="all">ALL TEAMS</option>
+                <option value="focus_team">HOME</option>
+                <option value="opponent">AWAY</option>
+              </select>
+              <select className="brutal-select" style={{ fontSize: "0.6rem", padding: "2px 4px" }} value={filterPlayer} onChange={e => setFilterPlayer(e.target.value)}>
+                <option value="all">ALL PLAYERS</option>
+                {teamSheet.map(p => (
+                  <option key={p.id} value={p.id}>{p.jersey_number} {p.player_name}</option>
+                ))}
+              </select>
+              <select className="brutal-select" style={{ fontSize: "0.6rem", padding: "2px 4px" }} value={filterAction} onChange={e => setFilterAction(e.target.value)}>
+                <option value="all">ALL ACTIONS</option>
+                <option value="shot">SHOTS</option>
+                <option value="key_pass">KEY PASSES</option>
+                <option value="assist">ASSISTS</option>
+              </select>
+              <select className="brutal-select" style={{ fontSize: "0.6rem", padding: "2px 4px" }} value={filterOutcome} onChange={e => setFilterOutcome(e.target.value)}>
+                <option value="all">ALL OUTCOMES</option>
+                <option value="goal">GOALS</option>
+                <option value="miss">OTHER</option>
+              </select>
+            </div>
+
             <div style={{ flex: 1, overflowY: "auto", padding: 0 }}>
-              {events.length === 0 ? (
-                <p style={{ fontSize: "0.8rem", color: "#666", textAlign: "center", padding: 32 }}>NO EVENTS LOGGED</p>
+              {filteredEvents.length === 0 ? (
+                <p style={{ fontSize: "0.8rem", color: "#666", textAlign: "center", padding: 32 }}>NO MATCHING EVENTS</p>
               ) : (
                 <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.7rem" }}>
                   <thead style={{ position: "sticky", top: 0, background: "#f0f0f0", borderBottom: "2px solid #000", zIndex: 1 }}>
@@ -305,7 +352,7 @@ export default function TaggerPage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {events.map((ev) => {
+                    {filteredEvents.map((ev) => {
                       const player = teamSheet.find(p => p.id === ev.action_player_id);
                       return (
                         <tr 
