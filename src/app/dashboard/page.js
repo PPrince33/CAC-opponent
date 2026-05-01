@@ -57,7 +57,7 @@ function ScoutingPitch({ events, selectedEventId, onEventClick, selectedTeam, he
         <div style={{ display: "flex", gap: 14, fontSize: "0.62rem" }}>
           <span style={{ color: COLOR_OPP   }}>■ {selectedTeam || "NEXT OPP"} (L→R)</span>
           <span style={{ color: COLOR_OTHER }}>■ OPPOSITION (R→L)</span>
-          <span>⚽ Goal</span><span>★ On Target</span><span>+ Miss</span><span>✕ Blocked</span><span>○ Pass</span>
+          <span>⚽ Goal</span><span>★ On Target</span><span>+ Miss</span><span>✕ Blocked</span><span>● Assist</span><span>○ Pass</span>
         </div>
       </div>
       <div style={{ background: "#fff", position: "relative", aspectRatio: "3/2" }}>
@@ -122,8 +122,12 @@ function ScoutingPitch({ events, selectedEventId, onEventClick, selectedTeam, he
                   </>
                 )}
                 {isPass ? (
-                  /* Pass/Assist = open circle */
-                  <circle cx={sx} cy={sy} r={r} fill="none" stroke={color} strokeWidth={isSelected ? 0.7 : 0.5} />
+                  /* Pass = open circle, Assist = filled circle */
+                  ev.event_type === "assist" ? (
+                    <circle cx={sx} cy={sy} r={r} fill={color} stroke={isSelected ? "#000" : "none"} strokeWidth="0.3" />
+                  ) : (
+                    <circle cx={sx} cy={sy} r={r} fill="none" stroke={color} strokeWidth={isSelected ? 0.7 : 0.5} />
+                  )
                 ) : (
                   /* Shot = filled circle + symbol text */
                   <>
