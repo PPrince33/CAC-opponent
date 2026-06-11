@@ -342,9 +342,11 @@ export default function ReelPage() {
     bgVid.playsInline = true;
     bgVid.preload = "auto";
     bgVid.crossOrigin = "anonymous";
+    bgVid.onended = () => { bgVid.currentTime = 0; bgVid.play().catch(() => {}); };
     bgVid.onloadeddata = () => {
       bgVideoRef.current = bgVid;
       setBgVideoName("bg-video.mp4");
+      bgVid.play().catch(() => {});
     };
     bgVid.src = "/bg-video.mp4";
   }, []);
@@ -454,7 +456,7 @@ export default function ReelPage() {
 
     if (span.name === "intro") {
       drawWcLogo(ctx, wcImg, W / 2, 470, 560, 620, easeOut(lt / 0.8));
-      ctx.fillStyle = ACCENT;
+      ctx.fillStyle = INK;
       ctx.font = `900 72px ${FONT_WC}`;
       ctx.textAlign = "center";
       btext(ctx, typeOn("SCORING AND", (lt - 0.4) / 0.8), W / 2, 940);
@@ -516,7 +518,7 @@ export default function ReelPage() {
       btext(ctx, "ATTACK — SHOT MAP", W / 2, 250);
       ctx.fillStyle = MUTED;
       ctx.font = `700 40px ${FONT_WC}`;
-      ctx.fillText(`${teamUp} — ALL SCOUTED MATCHES`, W / 2, 320);
+      ctx.fillText(`${teamUp} — ALL MATCHES`, W / 2, 320);
       drawPitch(ctx, easeOut(lt / 0.6));
 
       const per = 0.22, lead = 1.0;
@@ -673,7 +675,7 @@ export default function ReelPage() {
       btext(ctx, typeOn("EVERY CHANCE. MAPPED.", (lt - 0.8) / 1.0), W / 2, 1000);
       ctx.fillStyle = MUTED;
       ctx.font = `700 44px ${FONT_WC}`;
-      ctx.fillText(typeOn("FULL SCOUT REPORT:", (lt - 1.6) / 0.6), W / 2, 1180);
+      ctx.fillText(typeOn("FULL REPORT:", (lt - 1.6) / 0.6), W / 2, 1180);
       ctx.fillStyle = ACCENT2;
       ctx.font = `900 70px ${FONT_WC}`;
       btext(ctx, typeOn("CALCIOAC.COM", (lt - 2.0) / 0.6), W / 2, 1300);
