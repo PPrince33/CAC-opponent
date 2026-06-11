@@ -229,29 +229,33 @@ function drawShotMarker(ctx, ev, x, y, k) {
 // ─── Common chrome ────────────────────────────────────────────────────────────
 function drawBackground(ctx, bgVideo) {
   if (bgVideo && bgVideo.readyState >= 2) {
-    // Draw video covering full canvas (center-crop to 9:16)
-    const vw = bgVideo.videoWidth, vh = bgVideo.videoHeight;
-    const canvasAR = W / H, videoAR = vw / vh;
-    let sx, sy, sw, sh;
-    if (videoAR > canvasAR) {
-      sh = vh; sw = vh * canvasAR;
-      sx = (vw - sw) / 2; sy = 0;
-    } else {
-      sw = vw; sh = vw / canvasAR;
-      sx = 0; sy = (vh - sh) / 2;
+    try {
+      // Draw video covering full canvas (center-crop to 9:16)
+      const vw = bgVideo.videoWidth, vh = bgVideo.videoHeight;
+      const canvasAR = W / H, videoAR = vw / vh;
+      let sx, sy, sw, sh;
+      if (videoAR > canvasAR) {
+        sh = vh; sw = vh * canvasAR;
+        sx = (vw - sw) / 2; sy = 0;
+      } else {
+        sw = vw; sh = vw / canvasAR;
+        sx = 0; sy = (vh - sh) / 2;
+      }
+      ctx.drawImage(bgVideo, sx, sy, sw, sh, 0, 0, W, H);
+      // Dark overlay so text remains readable
+      ctx.fillStyle = "rgba(10, 15, 50, 0.55)";
+      ctx.fillRect(0, 0, W, H);
+      return;
+    } catch (e) {
+      // Canvas tainted — fall through to gradient
     }
-    ctx.drawImage(bgVideo, sx, sy, sw, sh, 0, 0, W, H);
-    // Dark overlay so text remains readable
-    ctx.fillStyle = "rgba(10, 15, 50, 0.55)";
-    ctx.fillRect(0, 0, W, H);
-  } else {
-    const g = ctx.createLinearGradient(0, 0, 0, H);
-    g.addColorStop(0, WC_BLUE);
-    g.addColorStop(0.5, BG);
-    g.addColorStop(1, "#0F1340");
-    ctx.fillStyle = g;
-    ctx.fillRect(0, 0, W, H);
   }
+  const g = ctx.createLinearGradient(0, 0, 0, H);
+  g.addColorStop(0, WC_BLUE);
+  g.addColorStop(0.5, BG);
+  g.addColorStop(1, "#0F1340");
+  ctx.fillStyle = g;
+  ctx.fillRect(0, 0, W, H);
 }
 
 function drawFooter(ctx, wcImg) {
@@ -341,7 +345,7 @@ export default function ReelPage() {
     bgVid.loop = true;
     bgVid.playsInline = true;
     bgVid.preload = "auto";
-    bgVid.crossOrigin = "anonymous";
+    bgVid.crossOrigin = "";
     bgVid.onended = () => { bgVid.currentTime = 0; bgVid.play().catch(() => {}); };
     bgVid.onloadeddata = () => {
       bgVideoRef.current = bgVid;
