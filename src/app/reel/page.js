@@ -318,6 +318,7 @@ export default function ReelPage() {
   const [videoUrl, setVideoUrl] = useState(null);
   const [videoExt, setVideoExt] = useState("webm");
   const [withAudio, setWithAudio] = useState(true);
+  const [reelSubtitle, setReelSubtitle] = useState("");
 
   const canvasRef  = useRef(null);
   const rafRef     = useRef(null);
@@ -545,7 +546,14 @@ export default function ReelPage() {
       btext(ctx, "ATTACK — SHOT MAP", W / 2, 250);
       ctx.fillStyle = MUTED;
       ctx.font = `700 40px ${FONT_WC}`;
-      ctx.fillText(`${teamUp} — ALL MATCHES`, W / 2, 320);
+      // Smart subtitle: custom text > single match opponent > count
+      const sub = reelSubtitle.trim()
+        || (matchIds.length === 1 && data.cards.length === 1
+          ? `VS ${data.cards[0].opp.toUpperCase()}`
+          : matchIds.length < teamMatches.length
+            ? `${matchIds.length} MATCHES`
+            : "ALL MATCHES");
+      ctx.fillText(`${teamUp} — ${sub}`, W / 2, 320);
       drawPitch(ctx, easeOut(lt / 0.6));
 
       const per = 0.22, lead = 1.0;
@@ -584,7 +592,13 @@ export default function ReelPage() {
       btext(ctx, "CONCEDE — SHOT MAP", W / 2, 250);
       ctx.fillStyle = MUTED;
       ctx.font = `700 40px ${FONT_WC}`;
-      ctx.fillText(`SHOTS FACED BY ${teamUp}`, W / 2, 320);
+      const subC = reelSubtitle.trim()
+        || (matchIds.length === 1 && data.cards.length === 1
+          ? `VS ${data.cards[0].opp.toUpperCase()}`
+          : matchIds.length < teamMatches.length
+            ? `${matchIds.length} MATCHES`
+            : "ALL MATCHES");
+      ctx.fillText(`SHOTS FACED — ${subC}`, W / 2, 320);
       drawPitch(ctx, easeOut(lt / 0.6), "DEFENDING ↓");
 
       // conceded shots attack the team's own goal — mirror so they run downward
@@ -915,6 +929,18 @@ export default function ReelPage() {
               </div>
               <div style={{ fontSize: "0.65rem", color: "#666", marginTop: 8 }}>
                 {data.mine.length} events · {data.shots.length} shots · {data.goals.length} goals · {data.keyPasses.length} key passes · {data.assists.length} assists · {data.shotsAgainst.length} shots faced
+              </div>
+              <div style={{ marginTop: 10 }}>
+                <label style={{ ...label, marginBottom: 4 }}>REEL SUBTITLE (optional)</label>
+                <input
+                  className="brutal-select"
+                  type="text"
+                  placeholder={matchIds.length === 1 && data.cards.length === 1 ? `VS ${data.cards[0].opp.toUpperCase()}` : "ALL MATCHES"}
+                  value={reelSubtitle}
+                  onChange={(e) => setReelSubtitle(e.target.value)}
+                  style={{ width: "100%", fontSize: "0.7rem", padding: "6px 10px" }}
+                />
+                <div style={{ fontSize: "0.6rem", color: "#666", marginTop: 4 }}>Leave blank for auto · shown on shot map slides</div>
               </div>
             </div>
           )}
