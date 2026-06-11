@@ -185,11 +185,13 @@ export default function TaggerPage() {
       setTimestamp(currentTime);
     }
 
-    // Save raw coordinates. Normalization (Finish Highlight) handles R2L→L2R flipping.
+    // Save raw coordinates with the ACTING team's direction (home teams and away
+    // teams attack opposite ends — DIR toggle holds the home team's direction).
+    // Normalization (Finish Highlight) flips R2L events to L2R.
     const payload = {
       match_id:       selectedMatchId,
       timestamp:      currentTime,
-      team_direction: direction,
+      team_direction: actingTeamDirection(tagForm.action_team),
       start_x:        activeEventData.startX,
       start_y:        activeEventData.startY,
       end_x:          activeEventData.endX,
@@ -212,7 +214,7 @@ export default function TaggerPage() {
       setActiveEventData(null);
       setTagForm(f => ({ ...f, action_player_id: "", reaction_player_id: "", shot_outcome: null, body_part: null, goal_x: null, goal_y: null }));
     }
-  }, [selectedMatchId, activeEventData, timestamp, direction, tagForm, ytPlayerRef, videoRef]);
+  }, [selectedMatchId, selectedMatch, activeEventData, timestamp, direction, tagForm, ytPlayerRef, videoRef]);
 
   // ─── Finish Highlight: Normalize and push to normalized_highlight_events ───
   const handleFinishHighlight = async () => {
@@ -235,10 +237,10 @@ export default function TaggerPage() {
         .eq("match_id", selectedMatchId);
 
       // 3. Normalize each event
-      // Raw events are already stored as L2R (tagger flips at save time).
-      // All normalized events are L2R. Color in dashboard = green/red by action_team.
+      // Raw events carry the acting team's direction; V2 flips R2L → L2R so
+      // every normalized event attacks L2R regardless of team or half.
       const normalized = (rawEvents || []).map(ev => {
-        const norm = normalizeHighlightEventV2(ev); // no-op, already L2R
+        const norm = normalizeHighlightEventV2(ev);
         return {
           source_event_id:  ev.id,
           match_id:         ev.match_id,

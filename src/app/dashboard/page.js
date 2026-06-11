@@ -347,11 +347,15 @@ export default function DashboardPage() {
         )}
 
         {selectedTeam && (
-          <div style={{ marginLeft: "auto", display: "flex", gap: 14, fontWeight: 900, fontSize: "0.75rem" }}>
+          <div style={{ marginLeft: "auto", display: "flex", gap: 14, fontWeight: 900, fontSize: "0.75rem", alignItems: "center" }}>
             <span style={{ color: COLOR_OPP }}>⚽ {stats.goals}</span>
             <span>SHOTS {stats.shots}</span>
             <span>PASSES {stats.passes}</span>
             <span>TOTAL {stats.total}</span>
+            <a href={`/reel?team=${encodeURIComponent(selectedTeam)}`} className="brutal-btn"
+              style={{ background: "#EA0029", color: "#fff", fontSize: "0.7rem", padding: "4px 12px", textDecoration: "none", fontWeight: 900 }}>
+              🎬 GENERATE REEL
+            </a>
           </div>
         )}
       </div>
