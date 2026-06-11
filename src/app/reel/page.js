@@ -25,10 +25,11 @@ const ACCENT   = WC_RED;
 const ACCENT2  = WC_GREEN;
 const CAC_GRN  = "#6BDB58";
 const INK      = "#FFFFFF";
+const BLK      = "#000000"; // black text for reel content
 const MUTED    = "rgba(209,212,209,0.75)"; // light gray
 const FONT     = '"Courier New", Courier, monospace'; // footer only
 const FONT_WC  = '"FWC2026", "Courier New", Courier, monospace'; // main display font
-const FONT_D   = '"FWC2026", "Courier New", Courier, monospace'; // country name display font
+const FONT_D   = '"FIFA26Display", "FWC2026", "Courier New", Courier, monospace'; // country name display font
 
 // Display text helper for country names
 function dtext(ctx, text, x, y, size) {
@@ -316,6 +317,11 @@ export default function ReelPage() {
     // Load FWC2026 display font for canvas text
     const ff = new FontFace("FWC2026", "url(/fwc2026.ttf)");
     ff.load()
+      .then((f) => { document.fonts.add(f); })
+      .catch(() => {});
+    // Load FIFA26Display font for country/team names
+    const ff2 = new FontFace("FIFA26Display", "url(/fifa26-display.otf)");
+    ff2.load()
       .then((f) => { document.fonts.add(f); setFontReady(true); })
       .catch(() => setFontReady(true));
     // Pre-select team passed from the dashboard (?team=…)
@@ -440,13 +446,11 @@ export default function ReelPage() {
 
     if (span.name === "intro") {
       drawWcLogo(ctx, wcImg, W / 2, 470, 560, 620, easeOut(lt / 0.8));
-      ctx.fillStyle = MUTED;
-      ctx.font = `700 44px ${FONT_WC}`;
-      ctx.textAlign = "center";
-      ctx.fillText(typeOn("FIFA WORLD CUP 2026", (lt - 0.4) / 0.8), W / 2, 920);
       ctx.fillStyle = ACCENT;
-      ctx.font = `900 56px ${FONT_WC}`;
-      ctx.fillText(typeOn("ATTACK & CONCEDE ANALYSIS", (lt - 1.0) / 0.9), W / 2, 1060);
+      ctx.font = `900 72px ${FONT_WC}`;
+      ctx.textAlign = "center";
+      ctx.fillText(typeOn("SCORING AND", (lt - 0.4) / 0.8), W / 2, 940);
+      ctx.fillText(typeOn("CONCESSION ANALYTICS", (lt - 0.8) / 0.9), W / 2, 1030);
       // team logo pop
       const k = easeOut((lt - 1.8) / 0.7);
       if (k > 0) {
@@ -455,7 +459,7 @@ export default function ReelPage() {
         ctx.scale(0.6 + 0.4 * k, 0.6 + 0.4 * k);
         drawImageFit(ctx, logoImg, 0, 0, 380, 380, k);
         ctx.restore();
-        ctx.fillStyle = INK;
+        ctx.fillStyle = BLK;
         ctx.globalAlpha = k;
         dtext(ctx, teamUp, W / 2, 1640, teamUp.length > 12 ? 72 : 96);
         ctx.globalAlpha = 1;
@@ -463,10 +467,10 @@ export default function ReelPage() {
     }
 
     if (span.name === "cards") {
-      ctx.fillStyle = INK;
+      ctx.fillStyle = BLK;
       ctx.textAlign = "center";
       ctx.font = `900 72px ${FONT_WC}`;
-      ctx.fillText("MATCHES SCOUTED", W / 2, 280);  
+      ctx.fillText("MATCHES", W / 2, 280);
       ctx.fillStyle = ACCENT2;
       ctx.fillRect(W / 2 - 160, 320, 320, 10);
       drawImageFit(ctx, logoImg, W / 2, 470, 180, 180, easeOut(lt / 0.5));
@@ -482,7 +486,7 @@ export default function ReelPage() {
         ctx.strokeStyle = "rgba(255,255,255,0.25)";
         ctx.lineWidth = 3;
         ctx.strokeRect(80, y, W - 160, 140);
-        ctx.fillStyle = INK;
+        ctx.fillStyle = BLK;
         ctx.textAlign = "left";
         ctx.font = `800 46px ${FONT_WC}`;
         ctx.fillText(`VS ${c.opp.toUpperCase()}`, 120, y + 62);
@@ -498,7 +502,7 @@ export default function ReelPage() {
     }
 
     if (span.name === "shotmap") {
-      ctx.fillStyle = INK;
+      ctx.fillStyle = BLK;
       ctx.textAlign = "center";
       ctx.font = `900 72px ${FONT_WC}`;
       ctx.fillText("ATTACK — SHOT MAP", W / 2, 250);  
@@ -537,7 +541,7 @@ export default function ReelPage() {
     }
 
     if (span.name === "concede") {
-      ctx.fillStyle = INK;
+      ctx.fillStyle = BLK;
       ctx.textAlign = "center";
       ctx.font = `900 72px ${FONT_WC}`;
       ctx.fillText("CONCEDE — SHOT MAP", W / 2, 250);  
@@ -576,7 +580,7 @@ export default function ReelPage() {
     }
 
     if (span.name === "heat") {
-      ctx.fillStyle = INK;
+      ctx.fillStyle = BLK;
       ctx.textAlign = "center";
       ctx.font = `900 68px ${FONT_WC}`;
       ctx.fillText("WHERE THE DANGER", W / 2, 240);
@@ -604,7 +608,7 @@ export default function ReelPage() {
     }
 
     if (span.name === "players") {
-      ctx.fillStyle = INK;
+      ctx.fillStyle = BLK;
       ctx.textAlign = "center";
       ctx.font = `900 72px ${FONT_WC}`;
       ctx.fillText("DANGER MEN", W / 2, 280);  
@@ -624,7 +628,7 @@ export default function ReelPage() {
         // jersey box
         ctx.fillStyle = ACCENT2;
         ctx.fillRect(80, y, 110, 110);
-        ctx.fillStyle = INK;
+        ctx.fillStyle = BLK;
         ctx.font = `900 56px ${FONT_WC}`;
         ctx.textAlign = "center";
         ctx.fillText(String(p.jersey), 135, y + 75);
@@ -649,7 +653,7 @@ export default function ReelPage() {
     if (span.name === "outro") {
       const k = easeOut(lt / 0.8);
       drawImageFit(ctx, logoImg, W / 2, 520, 360, 360, k);
-      ctx.fillStyle = INK;
+      ctx.fillStyle = BLK;
       ctx.textAlign = "center";
       ctx.globalAlpha = k;
       // Country name in FIFA26 display font
