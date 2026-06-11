@@ -12,6 +12,29 @@ import { supabase } from "@/lib/supabase";
 
 const W = 1080, H = 1920, FPS = 30;
 
+// ─── Fix WebM duration (Chrome MediaRecorder doesn't write it) ────────────────
+// Scans the EBML/Matroska container for the Segment > Info > Duration element
+// and patches it with the actual duration in milliseconds.
+async function fixWebmDuration(blob, durationMs) {
+  const buf = await blob.arrayBuffer();
+  const view = new DataView(buf);
+  // Search for the Duration EBML element ID (0x4489)
+  for (let i = 0; i < buf.byteLength - 12; i++) {
+    if (view.getUint16(i) === 0x4489) {
+      // Next byte is the size (should be 0x88 = 8 bytes float64)
+      if (view.getUint8(i + 2) === 0x88) {
+        const current = view.getFloat64(i + 3);
+        // If duration is 0 or not set, patch it
+        if (!current || current < 0) {
+          view.setFloat64(i + 3, durationMs);
+        }
+        break;
+      }
+    }
+  }
+  return new Blob([buf], { type: blob.type });
+}
+
 // Official FIFA World Cup 26 palette
 const WC_BLUE  = "#2A398D"; // Dark cornflower blue — PMS 7687 C
 const WC_RED   = "#E61D25"; // Lust — PMS 485 C
@@ -779,12 +802,18 @@ export default function ReelPage() {
       const chunks = [];
       recorder = new MediaRecorder(stream, { mimeType: mime || undefined, videoBitsPerSecond: 12_000_000 });
       recorder.ondataavailable = (e) => { if (e.data.size) chunks.push(e.data); };
-      recorder.onstop = () => {
+      recorder.onstop = async () => {
         const ext = mime.startsWith("video/mp4") ? "mp4" : "webm";
+        let blob = new Blob(chunks, { type: mime || "video/webm" });
+        // Fix WebM duration metadata (Chrome doesn't set it)
+        if (ext === "webm") {
+          try { blob = await fixWebmDuration(blob, timeline.total * 1000); } catch {}
+        }
         setVideoExt(ext);
-        setVideoUrl(URL.createObjectURL(new Blob(chunks, { type: mime || "video/webm" })));
+        setVideoUrl(URL.createObjectURL(blob));
       };
-      recorder.start();
+      // Use 200ms timeslice for frequent keyframes so the video is seekable
+      recorder.start(200);
     }
 
     const t0 = performance.now();
