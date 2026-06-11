@@ -323,6 +323,18 @@ export default function ReelPage() {
     // Pre-select team passed from the dashboard (?team=…)
     const q = new URLSearchParams(window.location.search).get("team");
     if (q) setTeam(q);
+    // Auto-load background video from public folder
+    const bgVid = document.createElement("video");
+    bgVid.muted = true;
+    bgVid.loop = true;
+    bgVid.playsInline = true;
+    bgVid.preload = "auto";
+    bgVid.crossOrigin = "anonymous";
+    bgVid.onloadeddata = () => {
+      bgVideoRef.current = bgVid;
+      setBgVideoName("bg-video.mp4");
+    };
+    bgVid.src = "/bg-video.mp4";
   }, []);
 
   const allTeams = useMemo(() => {
