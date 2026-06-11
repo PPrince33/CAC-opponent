@@ -12,15 +12,31 @@ import { supabase } from "@/lib/supabase";
 
 const W = 1080, H = 1920, FPS = 30;
 
-// WC26 theme
-const BG       = "#0B1026"; // deep navy
-const BG2      = "#101A3C";
-const ACCENT   = "#EA0029"; // WC26 red
-const ACCENT2  = "#3D7DFF"; // WC26 blue
+// Official FIFA World Cup 26 palette
+const WC_BLUE  = "#2A398D"; // Dark cornflower blue — PMS 7687 C
+const WC_RED   = "#E61D25"; // Lust — PMS 485 C
+const WC_GREEN = "#3CAC3B"; // American green — PMS 7738 C
+const WC_GRAY  = "#D1D4D1"; // Light gray — PMS 427 C
+const WC_SPACE = "#474A4A"; // Outer space — PMS 2336 C
+
+const BG       = "#1A2160"; // deep shade of WC blue
+const BG2      = "#222C77"; // pitch panel
+const ACCENT   = WC_RED;
+const ACCENT2  = WC_GREEN;
 const CAC_GRN  = "#6BDB58";
 const INK      = "#FFFFFF";
-const MUTED    = "rgba(255,255,255,0.55)";
+const MUTED    = "rgba(209,212,209,0.75)"; // light gray
 const FONT     = '"Courier New", Courier, monospace';
+const FONT_D   = '"FIFA26", "Courier New", Courier, monospace'; // display font: headlines only
+
+// FIFA26's space glyph is near zero-width — draw display text with explicit
+// word spacing, then reset so regular Courier text is unaffected.
+function dtext(ctx, text, x, y, size) {
+  ctx.font = `900 ${size}px ${FONT_D}`;
+  try { ctx.wordSpacing = Math.round(size * 0.45) + "px"; } catch {}
+  ctx.fillText(text, x, y);
+  try { ctx.wordSpacing = "0px"; } catch {}
+}
 
 // CAC logo (from brand SVG, viewBox 868×440)
 const CAC_LEFT  = "M143 67 L47 161 L141 256 L168 230 L100 161 L168 93 Z";
@@ -88,7 +104,7 @@ function drawWcLogo(ctx, img, cx, cy, maxW, maxH, alpha = 1) {
   const padW = maxW * 0.75, padH = maxH * 0.62;
   ctx.save();
   ctx.globalAlpha = alpha;
-  ctx.fillStyle = "#F2F4F8";
+  ctx.fillStyle = WC_GRAY;
   const r = 28;
   ctx.beginPath();
   ctx.roundRect(cx - padW / 2 - 30, cy - padH / 2 - 30, padW + 60, padH + 60, r);
@@ -120,7 +136,7 @@ function drawPitch(ctx, alpha = 1, arrowLabel = "ATTACKING ↑") {
   ctx.globalAlpha = alpha;
   ctx.fillStyle = BG2;
   ctx.fillRect(P.x, P.y, P.w, P.h);
-  ctx.strokeStyle = "rgba(255,255,255,0.45)";
+  ctx.strokeStyle = "rgba(209,212,209,0.5)";
   ctx.lineWidth = 4;
   ctx.strokeRect(P.x, P.y, P.w, P.h);
   // halfway line + circle
@@ -138,7 +154,7 @@ function drawPitch(ctx, alpha = 1, arrowLabel = "ATTACKING ↑") {
   ctx.strokeRect(cxp - bw / 2, P.y + P.h - bh, bw, bh);
   ctx.strokeRect(cxp - gw / 2, P.y + P.h - gh, gw, gh);
   // penalty spots
-  ctx.fillStyle = "rgba(255,255,255,0.45)";
+  ctx.fillStyle = "rgba(209,212,209,0.5)";
   ctx.beginPath(); ctx.arc(cxp, toSY(109), 5, 0, Math.PI * 2); ctx.fill();
   ctx.beginPath(); ctx.arc(cxp, toSY(11), 5, 0, Math.PI * 2); ctx.fill();
   // attacking arrow
@@ -172,10 +188,10 @@ function drawShotMarker(ctx, ev, x, y, k) {
     ctx.fillStyle = ACCENT;
     ctx.beginPath(); ctx.arc(x, y, r + 6, 0, Math.PI * 2); ctx.fill();
   } else if (ev.shot_outcome === "target") {
-    ctx.fillStyle = "#FFD24A";
+    ctx.fillStyle = WC_GREEN;
     drawStar(ctx, x, y, r + 6);
   } else if (ev.shot_outcome === "blocked") {
-    ctx.strokeStyle = "#9aa7c7";
+    ctx.strokeStyle = WC_GRAY;
     ctx.lineWidth = 6;
     const d = r * 0.8;
     ctx.beginPath();
@@ -183,7 +199,7 @@ function drawShotMarker(ctx, ev, x, y, k) {
     ctx.moveTo(x + d, y - d); ctx.lineTo(x - d, y + d);
     ctx.stroke();
   } else {
-    ctx.strokeStyle = "#9aa7c7";
+    ctx.strokeStyle = WC_GRAY;
     ctx.lineWidth = 6;
     const d = r * 0.9;
     ctx.beginPath();
@@ -197,9 +213,9 @@ function drawShotMarker(ctx, ev, x, y, k) {
 // ─── Common chrome ────────────────────────────────────────────────────────────
 function drawBackground(ctx) {
   const g = ctx.createLinearGradient(0, 0, 0, H);
-  g.addColorStop(0, "#0D1330");
+  g.addColorStop(0, WC_BLUE);
   g.addColorStop(0.5, BG);
-  g.addColorStop(1, "#070B1B");
+  g.addColorStop(1, "#0F1340");
   ctx.fillStyle = g;
   ctx.fillRect(0, 0, W, H);
 }
@@ -233,6 +249,7 @@ export default function ReelPage() {
   const [logoImg, setLogoImg]   = useState(null);
   const [logoName, setLogoName] = useState("");
   const [wcImg, setWcImg]       = useState(null);
+  const [fontReady, setFontReady] = useState(false);
   const [running, setRunning]   = useState(false);
   const [recording, setRecording] = useState(false);
   const [progress, setProgress] = useState(0);
@@ -251,6 +268,11 @@ export default function ReelPage() {
       setMatches(data || []);
     })();
     loadImageUrl("/wc26.png").then(setWcImg).catch(() => setWcImg(null));
+    // FIFA 26 display font for canvas text (falls back to Courier if it fails)
+    const ff = new FontFace("FIFA26", "url(/fifa26.otf)");
+    ff.load()
+      .then((f) => { document.fonts.add(f); setFontReady(true); })
+      .catch(() => setFontReady(true));
     // Pre-select team passed from the dashboard (?team=…)
     const q = new URLSearchParams(window.location.search).get("team");
     if (q) setTeam(q);
@@ -366,8 +388,7 @@ export default function ReelPage() {
       ctx.textAlign = "center";
       ctx.fillText(typeOn("FIFA WORLD CUP 2026", (lt - 0.4) / 0.8), W / 2, 920);
       ctx.fillStyle = ACCENT;
-      ctx.font = `900 56px ${FONT}`;
-      ctx.fillText(typeOn("ATTACK & CONCEDE ANALYSIS", (lt - 1.0) / 0.9), W / 2, 1060);
+      dtext(ctx, typeOn("ATTACK & CONCEDE ANALYSIS", (lt - 1.0) / 0.9), W / 2, 1060, 52);
       // team logo pop
       const k = easeOut((lt - 1.8) / 0.7);
       if (k > 0) {
@@ -377,18 +398,16 @@ export default function ReelPage() {
         drawImageFit(ctx, logoImg, 0, 0, 380, 380, k);
         ctx.restore();
         ctx.fillStyle = INK;
-        ctx.font = `900 ${teamUp.length > 12 ? 78 : 104}px ${FONT}`;
         ctx.globalAlpha = k;
-        ctx.fillText(teamUp, W / 2, 1640);
+        dtext(ctx, teamUp, W / 2, 1640, teamUp.length > 12 ? 72 : 96);
         ctx.globalAlpha = 1;
       }
     }
 
     if (span.name === "cards") {
       ctx.fillStyle = INK;
-      ctx.font = `900 72px ${FONT}`;
       ctx.textAlign = "center";
-      ctx.fillText("MATCHES SCOUTED", W / 2, 280);
+      dtext(ctx, "MATCHES SCOUTED", W / 2, 280, 68);
       ctx.fillStyle = ACCENT2;
       ctx.fillRect(W / 2 - 160, 320, 320, 10);
       drawImageFit(ctx, logoImg, W / 2, 470, 180, 180, easeOut(lt / 0.5));
@@ -421,9 +440,8 @@ export default function ReelPage() {
 
     if (span.name === "shotmap") {
       ctx.fillStyle = INK;
-      ctx.font = `900 72px ${FONT}`;
       ctx.textAlign = "center";
-      ctx.fillText("ATTACK — SHOT MAP", W / 2, 250);
+      dtext(ctx, "ATTACK - SHOT MAP", W / 2, 250, 68);
       ctx.fillStyle = MUTED;
       ctx.font = `700 40px ${FONT}`;
       ctx.fillText(`${teamUp} — ALL SCOUTED MATCHES`, W / 2, 320);
@@ -444,15 +462,14 @@ export default function ReelPage() {
       const cy = H - 220;
       const cols = [
         ["SHOTS", shown, INK],
-        ["ON TARGET", targetShown, "#FFD24A"],
+        ["ON TARGET", targetShown, WC_GREEN],
         ["GOALS", goalsShown, ACCENT],
       ];
       cols.forEach(([label, val, color], i) => {
         const cx = W * (i + 0.5) / 3;
         ctx.fillStyle = color;
-        ctx.font = `900 92px ${FONT}`;
         ctx.textAlign = "center";
-        ctx.fillText(String(val), cx, cy);
+        dtext(ctx, String(val), cx, cy, 92);
         ctx.fillStyle = MUTED;
         ctx.font = `700 32px ${FONT}`;
         ctx.fillText(label, cx, cy + 50);
@@ -461,9 +478,8 @@ export default function ReelPage() {
 
     if (span.name === "concede") {
       ctx.fillStyle = INK;
-      ctx.font = `900 72px ${FONT}`;
       ctx.textAlign = "center";
-      ctx.fillText("CONCEDE — SHOT MAP", W / 2, 250);
+      dtext(ctx, "CONCEDE - SHOT MAP", W / 2, 250, 68);
       ctx.fillStyle = MUTED;
       ctx.font = `700 40px ${FONT}`;
       ctx.fillText(`SHOTS FACED BY ${teamUp}`, W / 2, 320);
@@ -484,15 +500,14 @@ export default function ReelPage() {
       const cy = H - 220;
       const cols = [
         ["SHOTS FACED", shown, INK],
-        ["ON TARGET", targetShown, "#FFD24A"],
+        ["ON TARGET", targetShown, WC_GREEN],
         ["CONCEDED", goalsShown, ACCENT],
       ];
       cols.forEach(([label, val, color], i) => {
         const cx = W * (i + 0.5) / 3;
         ctx.fillStyle = color;
-        ctx.font = `900 92px ${FONT}`;
         ctx.textAlign = "center";
-        ctx.fillText(String(val), cx, cy);
+        dtext(ctx, String(val), cx, cy, 92);
         ctx.fillStyle = MUTED;
         ctx.font = `700 32px ${FONT}`;
         ctx.fillText(label, cx, cy + 50);
@@ -501,10 +516,9 @@ export default function ReelPage() {
 
     if (span.name === "heat") {
       ctx.fillStyle = INK;
-      ctx.font = `900 68px ${FONT}`;
       ctx.textAlign = "center";
-      ctx.fillText("WHERE THE DANGER", W / 2, 240);
-      ctx.fillText("COMES FROM", W / 2, 320);
+      dtext(ctx, "WHERE THE DANGER", W / 2, 240, 64);
+      dtext(ctx, "COMES FROM", W / 2, 320, 64);
       drawPitch(ctx, 1);
       const { grid, maxHeat, HC, HR } = data;
       const cw = P.w / HR, chh = P.h / HC; // note: grid r=y(80), c=x(120) → vertical pitch
@@ -529,9 +543,8 @@ export default function ReelPage() {
 
     if (span.name === "players") {
       ctx.fillStyle = INK;
-      ctx.font = `900 72px ${FONT}`;
       ctx.textAlign = "center";
-      ctx.fillText("DANGER MEN", W / 2, 280);
+      dtext(ctx, "DANGER MEN", W / 2, 280, 68);
       ctx.fillStyle = ACCENT;
       ctx.fillRect(W / 2 - 160, 320, 320, 10);
       ctx.fillStyle = MUTED;
@@ -560,7 +573,7 @@ export default function ReelPage() {
         const bw = (W - 320) * (p.total / maxTotal) * easeOut((lt - 0.7 - i * 0.5) / 0.8);
         ctx.fillStyle = "rgba(255,255,255,0.12)";
         ctx.fillRect(230, y + 72, W - 320, 38);
-        ctx.fillStyle = i === 0 ? ACCENT : CAC_GRN;
+        ctx.fillStyle = i === 0 ? ACCENT : ACCENT2;
         ctx.fillRect(230, y + 72, Math.max(0, bw), 38);
         // counts
         ctx.fillStyle = MUTED;
@@ -574,20 +587,17 @@ export default function ReelPage() {
       const k = easeOut(lt / 0.8);
       drawImageFit(ctx, logoImg, W / 2, 520, 360, 360, k);
       ctx.fillStyle = INK;
-      ctx.font = `900 ${teamUp.length > 12 ? 72 : 96}px ${FONT}`;
       ctx.textAlign = "center";
       ctx.globalAlpha = k;
-      ctx.fillText(teamUp, W / 2, 820);
+      dtext(ctx, teamUp, W / 2, 820, teamUp.length > 12 ? 68 : 90);
       ctx.globalAlpha = 1;
       ctx.fillStyle = ACCENT;
-      ctx.font = `900 64px ${FONT}`;
-      ctx.fillText(typeOn("EVERY CHANCE. MAPPED.", (lt - 0.8) / 1.0), W / 2, 1000);
+      dtext(ctx, typeOn("EVERY CHANCE. MAPPED.", (lt - 0.8) / 1.0), W / 2, 1000, 58);
       ctx.fillStyle = MUTED;
       ctx.font = `700 44px ${FONT}`;
       ctx.fillText(typeOn("FULL SCOUT REPORT:", (lt - 1.6) / 0.6), W / 2, 1180);
-      ctx.fillStyle = CAC_GRN;
-      ctx.font = `900 76px ${FONT}`;
-      ctx.fillText(typeOn("CALCIOAC.COM", (lt - 2.0) / 0.6), W / 2, 1300);
+      ctx.fillStyle = ACCENT2;
+      dtext(ctx, typeOn("CALCIOAC.COM", (lt - 2.0) / 0.6), W / 2, 1300, 70);
       drawWcLogo(ctx, wcImg, W / 2, 1560, 280, 320, easeOut((lt - 2.4) / 0.8));
     }
 
@@ -717,7 +727,7 @@ export default function ReelPage() {
     if (!canvas) return;
     drawFrame(canvas.getContext("2d"), 2.6);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [team, data, logoImg, wcImg, running]);
+  }, [team, data, logoImg, wcImg, fontReady, running]);
 
   const handleLogoFile = async (file) => {
     if (!file) return;
