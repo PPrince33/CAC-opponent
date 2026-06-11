@@ -98,19 +98,28 @@ function loadRasterFile(file) {
   });
 }
 
-// WC26 logo has black artwork — give it a light badge so it reads on navy
+function loadVideoFile(file) {
+  return new Promise((res, rej) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const video = document.createElement("video");
+      video.muted = true;
+      video.loop = true;
+      video.playsInline = true;
+      video.preload = "auto";
+      video.onloadeddata = () => res(video);
+      video.onerror = rej;
+      video.src = reader.result;
+    };
+    reader.onerror = rej;
+    reader.readAsDataURL(file);
+  });
+}
+
+// WC26 logo — draw directly without any background badge
 function drawWcLogo(ctx, img, cx, cy, maxW, maxH, alpha = 1) {
   if (!img || alpha <= 0) return;
-  const padW = maxW * 0.75, padH = maxH * 0.62;
-  ctx.save();
-  ctx.globalAlpha = alpha;
-  ctx.fillStyle = WC_GRAY;
-  const r = 28;
-  ctx.beginPath();
-  ctx.roundRect(cx - padW / 2 - 30, cy - padH / 2 - 30, padW + 60, padH + 60, r);
-  ctx.fill();
-  ctx.restore();
-  drawImageFit(ctx, img, cx, cy, padW, padH, alpha);
+  drawImageFit(ctx, img, cx, cy, maxW, maxH, alpha);
 }
 
 // Draw an image centered in a box, preserving aspect ratio
@@ -211,13 +220,31 @@ function drawShotMarker(ctx, ev, x, y, k) {
 }
 
 // ─── Common chrome ────────────────────────────────────────────────────────────
-function drawBackground(ctx) {
-  const g = ctx.createLinearGradient(0, 0, 0, H);
-  g.addColorStop(0, WC_BLUE);
-  g.addColorStop(0.5, BG);
-  g.addColorStop(1, "#0F1340");
-  ctx.fillStyle = g;
-  ctx.fillRect(0, 0, W, H);
+function drawBackground(ctx, bgVideo) {
+  if (bgVideo && bgVideo.readyState >= 2) {
+    // Draw video covering full canvas (center-crop to 9:16)
+    const vw = bgVideo.videoWidth, vh = bgVideo.videoHeight;
+    const canvasAR = W / H, videoAR = vw / vh;
+    let sx, sy, sw, sh;
+    if (videoAR > canvasAR) {
+      sh = vh; sw = vh * canvasAR;
+      sx = (vw - sw) / 2; sy = 0;
+    } else {
+      sw = vw; sh = vw / canvasAR;
+      sx = 0; sy = (vh - sh) / 2;
+    }
+    ctx.drawImage(bgVideo, sx, sy, sw, sh, 0, 0, W, H);
+    // Dark overlay so text remains readable
+    ctx.fillStyle = "rgba(10, 15, 50, 0.55)";
+    ctx.fillRect(0, 0, W, H);
+  } else {
+    const g = ctx.createLinearGradient(0, 0, 0, H);
+    g.addColorStop(0, WC_BLUE);
+    g.addColorStop(0.5, BG);
+    g.addColorStop(1, "#0F1340");
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, W, H);
+  }
 }
 
 function drawFooter(ctx, wcImg) {
@@ -231,7 +258,7 @@ function drawFooter(ctx, wcImg) {
   ctx.textAlign = "left";
   ctx.fillText("CALCIOAC.COM", 230, H - 56);
   ctx.textAlign = "right";
-  ctx.fillText("WORLD CUP 2026 SCOUT", W - 70, H - 56);
+  ctx.fillText("WORLD CUP 2026", W - 70, H - 56);
   ctx.restore();
 }
 
@@ -248,6 +275,7 @@ export default function ReelPage() {
   const [sheets, setSheets]     = useState([]);
   const [logoImg, setLogoImg]   = useState(null);
   const [logoName, setLogoName] = useState("");
+  const [bgVideoName, setBgVideoName] = useState("");
   const [wcImg, setWcImg]       = useState(null);
   const [fontReady, setFontReady] = useState(false);
   const [running, setRunning]   = useState(false);
@@ -257,9 +285,10 @@ export default function ReelPage() {
   const [videoExt, setVideoExt] = useState("webm");
   const [withAudio, setWithAudio] = useState(true);
 
-  const canvasRef = useRef(null);
-  const rafRef    = useRef(null);
-  const audioRef  = useRef(null);
+  const canvasRef  = useRef(null);
+  const rafRef     = useRef(null);
+  const audioRef   = useRef(null);
+  const bgVideoRef = useRef(null);
 
   // Load matches + WC26 logo
   useEffect(() => {
@@ -267,7 +296,25 @@ export default function ReelPage() {
       const { data } = await supabase.from("opp_matches").select("*").order("match_date", { ascending: false });
       setMatches(data || []);
     })();
-    loadImageUrl("/wc26.png").then(setWcImg).catch(() => setWcImg(null));
+    // Load WC26 logo and remove white background
+    loadImageUrl("/wc26.png").then((img) => {
+      const c = document.createElement("canvas");
+      c.width = img.naturalWidth; c.height = img.naturalHeight;
+      const cx = c.getContext("2d");
+      cx.drawImage(img, 0, 0);
+      const id = cx.getImageData(0, 0, c.width, c.height);
+      const d = id.data;
+      for (let i = 0; i < d.length; i += 4) {
+        // Make white / near-white pixels transparent
+        if (d[i] > 240 && d[i+1] > 240 && d[i+2] > 240) {
+          d[i+3] = 0;
+        }
+      }
+      cx.putImageData(id, 0, 0);
+      const processed = new Image();
+      processed.onload = () => setWcImg(processed);
+      processed.src = c.toDataURL("image/png");
+    }).catch(() => setWcImg(null));
     // FIFA 26 display font for canvas text (falls back to Courier if it fails)
     const ff = new FontFace("FIFA26", "url(/fifa26.otf)");
     ff.load()
@@ -374,7 +421,7 @@ export default function ReelPage() {
 
   // ─── Render one frame at time t ────────────────────────────────────────────
   const drawFrame = (ctx, t) => {
-    drawBackground(ctx);
+    drawBackground(ctx, bgVideoRef.current);
     const span = timeline.spans.find((s) => t >= s.start && t < s.end) || timeline.spans[timeline.spans.length - 1];
     const lt = t - span.start; // local time
     const teamUp = (team || "").toUpperCase();
@@ -388,7 +435,8 @@ export default function ReelPage() {
       ctx.textAlign = "center";
       ctx.fillText(typeOn("FIFA WORLD CUP 2026", (lt - 0.4) / 0.8), W / 2, 920);
       ctx.fillStyle = ACCENT;
-      dtext(ctx, typeOn("ATTACK & CONCEDE ANALYSIS", (lt - 1.0) / 0.9), W / 2, 1060, 52);
+      ctx.font = `900 56px ${FONT}`;  
+      ctx.fillText(typeOn("ATTACK & CONCEDE ANALYSIS", (lt - 1.0) / 0.9), W / 2, 1060);
       // team logo pop
       const k = easeOut((lt - 1.8) / 0.7);
       if (k > 0) {
@@ -407,7 +455,8 @@ export default function ReelPage() {
     if (span.name === "cards") {
       ctx.fillStyle = INK;
       ctx.textAlign = "center";
-      dtext(ctx, "MATCHES SCOUTED", W / 2, 280, 68);
+      ctx.font = `900 72px ${FONT}`;
+      ctx.fillText("MATCHES SCOUTED", W / 2, 280);  
       ctx.fillStyle = ACCENT2;
       ctx.fillRect(W / 2 - 160, 320, 320, 10);
       drawImageFit(ctx, logoImg, W / 2, 470, 180, 180, easeOut(lt / 0.5));
@@ -441,7 +490,8 @@ export default function ReelPage() {
     if (span.name === "shotmap") {
       ctx.fillStyle = INK;
       ctx.textAlign = "center";
-      dtext(ctx, "ATTACK - SHOT MAP", W / 2, 250, 68);
+      ctx.font = `900 72px ${FONT}`;
+      ctx.fillText("ATTACK — SHOT MAP", W / 2, 250);  
       ctx.fillStyle = MUTED;
       ctx.font = `700 40px ${FONT}`;
       ctx.fillText(`${teamUp} — ALL SCOUTED MATCHES`, W / 2, 320);
@@ -479,7 +529,8 @@ export default function ReelPage() {
     if (span.name === "concede") {
       ctx.fillStyle = INK;
       ctx.textAlign = "center";
-      dtext(ctx, "CONCEDE - SHOT MAP", W / 2, 250, 68);
+      ctx.font = `900 72px ${FONT}`;
+      ctx.fillText("CONCEDE — SHOT MAP", W / 2, 250);  
       ctx.fillStyle = MUTED;
       ctx.font = `700 40px ${FONT}`;
       ctx.fillText(`SHOTS FACED BY ${teamUp}`, W / 2, 320);
@@ -517,9 +568,10 @@ export default function ReelPage() {
     if (span.name === "heat") {
       ctx.fillStyle = INK;
       ctx.textAlign = "center";
-      dtext(ctx, "WHERE THE DANGER", W / 2, 240, 64);
-      dtext(ctx, "COMES FROM", W / 2, 320, 64);
-      drawPitch(ctx, 1);
+      ctx.font = `900 68px ${FONT}`;
+      ctx.fillText("WHERE THE DANGER", W / 2, 240);
+      ctx.fillText("COMES FROM", W / 2, 320);
+      drawPitch(ctx, 1);  
       const { grid, maxHeat, HC, HR } = data;
       const cw = P.w / HR, chh = P.h / HC; // note: grid r=y(80), c=x(120) → vertical pitch
       for (let r = 0; r < HR; r++) {
@@ -544,7 +596,8 @@ export default function ReelPage() {
     if (span.name === "players") {
       ctx.fillStyle = INK;
       ctx.textAlign = "center";
-      dtext(ctx, "DANGER MEN", W / 2, 280, 68);
+      ctx.font = `900 72px ${FONT}`;
+      ctx.fillText("DANGER MEN", W / 2, 280);  
       ctx.fillStyle = ACCENT;
       ctx.fillRect(W / 2 - 160, 320, 320, 10);
       ctx.fillStyle = MUTED;
@@ -589,15 +642,19 @@ export default function ReelPage() {
       ctx.fillStyle = INK;
       ctx.textAlign = "center";
       ctx.globalAlpha = k;
+      // Country name in FIFA26 display font
       dtext(ctx, teamUp, W / 2, 820, teamUp.length > 12 ? 68 : 90);
       ctx.globalAlpha = 1;
       ctx.fillStyle = ACCENT;
-      dtext(ctx, typeOn("EVERY CHANCE. MAPPED.", (lt - 0.8) / 1.0), W / 2, 1000, 58);
+      // Tagline in monospace, not FIFA26
+      ctx.font = `900 58px ${FONT}`;
+      ctx.fillText(typeOn("EVERY CHANCE. MAPPED.", (lt - 0.8) / 1.0), W / 2, 1000);
       ctx.fillStyle = MUTED;
       ctx.font = `700 44px ${FONT}`;
       ctx.fillText(typeOn("FULL SCOUT REPORT:", (lt - 1.6) / 0.6), W / 2, 1180);
       ctx.fillStyle = ACCENT2;
-      dtext(ctx, typeOn("CALCIOAC.COM", (lt - 2.0) / 0.6), W / 2, 1300, 70);
+      ctx.font = `900 70px ${FONT}`;
+      ctx.fillText(typeOn("CALCIOAC.COM", (lt - 2.0) / 0.6), W / 2, 1300);
       drawWcLogo(ctx, wcImg, W / 2, 1560, 280, 320, easeOut((lt - 2.4) / 0.8));
     }
 
@@ -670,6 +727,12 @@ export default function ReelPage() {
     const canvas = canvasRef.current;
     const ctx = canvas.getContext("2d");
 
+    // Start playing the background video if loaded
+    if (bgVideoRef.current) {
+      bgVideoRef.current.currentTime = 0;
+      bgVideoRef.current.play().catch(() => {});
+    }
+
     let recorder = null;
     if (record) {
       const stream = canvas.captureStream(FPS);
@@ -703,6 +766,7 @@ export default function ReelPage() {
         drawFrame(ctx, timeline.total - 0.01);
         if (recorder) recorder.stop();
         if (audioRef.current) { audioRef.current.close(); audioRef.current = null; }
+        if (bgVideoRef.current) bgVideoRef.current.pause();
         setRunning(false);
         setRecording(false);
         setProgress(1);
@@ -718,6 +782,7 @@ export default function ReelPage() {
   useEffect(() => () => {
     cancelAnimationFrame(rafRef.current);
     if (audioRef.current) audioRef.current.close();
+    if (bgVideoRef.current) { bgVideoRef.current.pause(); bgVideoRef.current.src = ""; }
   }, []);
 
   // draw an idle title frame whenever inputs change
@@ -727,7 +792,7 @@ export default function ReelPage() {
     if (!canvas) return;
     drawFrame(canvas.getContext("2d"), 2.6);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [team, data, logoImg, wcImg, fontReady, running]);
+  }, [team, data, logoImg, wcImg, fontReady, running, bgVideoName]);
 
   const handleLogoFile = async (file) => {
     if (!file) return;
@@ -737,8 +802,19 @@ export default function ReelPage() {
         : await loadRasterFile(file);
       setLogoImg(img);
       setLogoName(file.name);
-    } catch {
+    } catch (err) {
       alert("Could not read that logo file — try an SVG or PNG.");
+    }
+  };
+
+  const handleBgVideo = async (file) => {
+    if (!file) return;
+    try {
+      const vid = await loadVideoFile(file);
+      bgVideoRef.current = vid;
+      setBgVideoName(file.name);
+    } catch {
+      alert("Could not load that video file — try an MP4 or WebM.");
     }
   };
 
@@ -792,6 +868,14 @@ export default function ReelPage() {
               onChange={(e) => handleLogoFile(e.target.files?.[0])} style={{ fontSize: "0.7rem" }} />
             {logoName && <div style={{ fontSize: "0.65rem", marginTop: 6, color: "#16a34a", fontWeight: 800 }}>✓ {logoName}</div>}
             {!logoName && <div style={{ fontSize: "0.65rem", marginTop: 6, color: "#666" }}>Drop the crest of the team you&apos;re scouting here.</div>}
+          </div>
+
+          <div className="brutal-card" style={{ padding: 16 }}>
+            <label style={label}>4. BACKGROUND VIDEO (MP4 / WEBM) — OPTIONAL</label>
+            <input type="file" accept="video/mp4,video/webm,video/*"
+              onChange={(e) => handleBgVideo(e.target.files?.[0])} style={{ fontSize: "0.7rem" }} />
+            {bgVideoName && <div style={{ fontSize: "0.65rem", marginTop: 6, color: "#16a34a", fontWeight: 800 }}>✓ {bgVideoName}</div>}
+            {!bgVideoName && <div style={{ fontSize: "0.65rem", marginTop: 6, color: "#666" }}>Upload a video to use as the reel background.</div>}
           </div>
 
           <div className="brutal-card" style={{ padding: 16, display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
