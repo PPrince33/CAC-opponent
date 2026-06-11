@@ -26,16 +26,14 @@ const ACCENT2  = WC_GREEN;
 const CAC_GRN  = "#6BDB58";
 const INK      = "#FFFFFF";
 const MUTED    = "rgba(209,212,209,0.75)"; // light gray
-const FONT     = '"Courier New", Courier, monospace';
-const FONT_D   = '"FIFA26", "Courier New", Courier, monospace'; // display font: headlines only
+const FONT     = '"Courier New", Courier, monospace'; // footer only
+const FONT_WC  = '"FWC2026", "Courier New", Courier, monospace'; // main display font
+const FONT_D   = '"FWC2026", "Courier New", Courier, monospace'; // country name display font
 
-// FIFA26's space glyph is near zero-width — draw display text with explicit
-// word spacing, then reset so regular Courier text is unaffected.
+// Display text helper for country names
 function dtext(ctx, text, x, y, size) {
   ctx.font = `900 ${size}px ${FONT_D}`;
-  try { ctx.wordSpacing = Math.round(size * 0.45) + "px"; } catch {}
   ctx.fillText(text, x, y);
-  try { ctx.wordSpacing = "0px"; } catch {}
 }
 
 // CAC logo (from brand SVG, viewBox 868×440)
@@ -315,8 +313,8 @@ export default function ReelPage() {
       processed.onload = () => setWcImg(processed);
       processed.src = c.toDataURL("image/png");
     }).catch(() => setWcImg(null));
-    // FIFA 26 display font for canvas text (falls back to Courier if it fails)
-    const ff = new FontFace("FIFA26", "url(/fifa26.otf)");
+    // Load FWC2026 display font for canvas text
+    const ff = new FontFace("FWC2026", "url(/fwc2026.ttf)");
     ff.load()
       .then((f) => { document.fonts.add(f); setFontReady(true); })
       .catch(() => setFontReady(true));
@@ -443,11 +441,11 @@ export default function ReelPage() {
     if (span.name === "intro") {
       drawWcLogo(ctx, wcImg, W / 2, 470, 560, 620, easeOut(lt / 0.8));
       ctx.fillStyle = MUTED;
-      ctx.font = `700 44px ${FONT}`;
+      ctx.font = `700 44px ${FONT_WC}`;
       ctx.textAlign = "center";
       ctx.fillText(typeOn("FIFA WORLD CUP 2026", (lt - 0.4) / 0.8), W / 2, 920);
       ctx.fillStyle = ACCENT;
-      ctx.font = `900 56px ${FONT}`;  
+      ctx.font = `900 56px ${FONT_WC}`;
       ctx.fillText(typeOn("ATTACK & CONCEDE ANALYSIS", (lt - 1.0) / 0.9), W / 2, 1060);
       // team logo pop
       const k = easeOut((lt - 1.8) / 0.7);
@@ -467,7 +465,7 @@ export default function ReelPage() {
     if (span.name === "cards") {
       ctx.fillStyle = INK;
       ctx.textAlign = "center";
-      ctx.font = `900 72px ${FONT}`;
+      ctx.font = `900 72px ${FONT_WC}`;
       ctx.fillText("MATCHES SCOUTED", W / 2, 280);  
       ctx.fillStyle = ACCENT2;
       ctx.fillRect(W / 2 - 160, 320, 320, 10);
@@ -486,14 +484,14 @@ export default function ReelPage() {
         ctx.strokeRect(80, y, W - 160, 140);
         ctx.fillStyle = INK;
         ctx.textAlign = "left";
-        ctx.font = `800 46px ${FONT}`;
+        ctx.font = `800 46px ${FONT_WC}`;
         ctx.fillText(`VS ${c.opp.toUpperCase()}`, 120, y + 62);
         ctx.fillStyle = MUTED;
-        ctx.font = `700 34px ${FONT}`;
+        ctx.font = `700 34px ${FONT_WC}`;
         ctx.fillText(`${c.events} EVENTS TAGGED`, 120, y + 112);
         ctx.fillStyle = ACCENT;
         ctx.textAlign = "right";
-        ctx.font = `900 64px ${FONT}`;
+        ctx.font = `900 64px ${FONT_WC}`;
         ctx.fillText(c.score, W - 120, y + 90);
         ctx.restore();
       });
@@ -502,10 +500,10 @@ export default function ReelPage() {
     if (span.name === "shotmap") {
       ctx.fillStyle = INK;
       ctx.textAlign = "center";
-      ctx.font = `900 72px ${FONT}`;
+      ctx.font = `900 72px ${FONT_WC}`;
       ctx.fillText("ATTACK — SHOT MAP", W / 2, 250);  
       ctx.fillStyle = MUTED;
-      ctx.font = `700 40px ${FONT}`;
+      ctx.font = `700 40px ${FONT_WC}`;
       ctx.fillText(`${teamUp} — ALL SCOUTED MATCHES`, W / 2, 320);
       drawPitch(ctx, easeOut(lt / 0.6));
 
@@ -533,7 +531,7 @@ export default function ReelPage() {
         ctx.textAlign = "center";
         dtext(ctx, String(val), cx, cy, 92);
         ctx.fillStyle = MUTED;
-        ctx.font = `700 32px ${FONT}`;
+        ctx.font = `700 32px ${FONT_WC}`;
         ctx.fillText(label, cx, cy + 50);
       });
     }
@@ -541,10 +539,10 @@ export default function ReelPage() {
     if (span.name === "concede") {
       ctx.fillStyle = INK;
       ctx.textAlign = "center";
-      ctx.font = `900 72px ${FONT}`;
+      ctx.font = `900 72px ${FONT_WC}`;
       ctx.fillText("CONCEDE — SHOT MAP", W / 2, 250);  
       ctx.fillStyle = MUTED;
-      ctx.font = `700 40px ${FONT}`;
+      ctx.font = `700 40px ${FONT_WC}`;
       ctx.fillText(`SHOTS FACED BY ${teamUp}`, W / 2, 320);
       drawPitch(ctx, easeOut(lt / 0.6), "DEFENDING ↓");
 
@@ -572,7 +570,7 @@ export default function ReelPage() {
         ctx.textAlign = "center";
         dtext(ctx, String(val), cx, cy, 92);
         ctx.fillStyle = MUTED;
-        ctx.font = `700 32px ${FONT}`;
+        ctx.font = `700 32px ${FONT_WC}`;
         ctx.fillText(label, cx, cy + 50);
       });
     }
@@ -580,7 +578,7 @@ export default function ReelPage() {
     if (span.name === "heat") {
       ctx.fillStyle = INK;
       ctx.textAlign = "center";
-      ctx.font = `900 68px ${FONT}`;
+      ctx.font = `900 68px ${FONT_WC}`;
       ctx.fillText("WHERE THE DANGER", W / 2, 240);
       ctx.fillText("COMES FROM", W / 2, 320);
       drawPitch(ctx, 1);  
@@ -600,7 +598,7 @@ export default function ReelPage() {
         }
       }
       ctx.fillStyle = MUTED;
-      ctx.font = `700 38px ${FONT}`;
+      ctx.font = `700 38px ${FONT_WC}`;
       ctx.textAlign = "center";
       ctx.fillText(`${data.mine.length} ATTACKING EVENTS MAPPED`, W / 2, H - 200);
     }
@@ -608,12 +606,12 @@ export default function ReelPage() {
     if (span.name === "players") {
       ctx.fillStyle = INK;
       ctx.textAlign = "center";
-      ctx.font = `900 72px ${FONT}`;
+      ctx.font = `900 72px ${FONT_WC}`;
       ctx.fillText("DANGER MEN", W / 2, 280);  
       ctx.fillStyle = ACCENT;
       ctx.fillRect(W / 2 - 160, 320, 320, 10);
       ctx.fillStyle = MUTED;
-      ctx.font = `700 36px ${FONT}`;
+      ctx.font = `700 36px ${FONT_WC}`;
       ctx.fillText("SHOTS + KEY PASSES + ASSISTS", W / 2, 400);
 
       const maxTotal = Math.max(1, ...data.players.map((p) => p.total));
@@ -627,12 +625,12 @@ export default function ReelPage() {
         ctx.fillStyle = ACCENT2;
         ctx.fillRect(80, y, 110, 110);
         ctx.fillStyle = INK;
-        ctx.font = `900 56px ${FONT}`;
+        ctx.font = `900 56px ${FONT_WC}`;
         ctx.textAlign = "center";
         ctx.fillText(String(p.jersey), 135, y + 75);
         // name
         ctx.textAlign = "left";
-        ctx.font = `800 50px ${FONT}`;
+        ctx.font = `800 50px ${FONT_WC}`;
         ctx.fillText(p.name.toUpperCase().slice(0, 22), 230, y + 50);
         // bar
         const bw = (W - 320) * (p.total / maxTotal) * easeOut((lt - 0.7 - i * 0.5) / 0.8);
@@ -642,7 +640,7 @@ export default function ReelPage() {
         ctx.fillRect(230, y + 72, Math.max(0, bw), 38);
         // counts
         ctx.fillStyle = MUTED;
-        ctx.font = `700 32px ${FONT}`;
+        ctx.font = `700 32px ${FONT_WC}`;
         ctx.fillText(`SH ${p.shots}  ·  G ${p.goals}  ·  KP ${p.kp}  ·  AST ${p.ast}`, 230, y + 160);
         ctx.restore();
       });
@@ -659,13 +657,13 @@ export default function ReelPage() {
       ctx.globalAlpha = 1;
       ctx.fillStyle = ACCENT;
       // Tagline in monospace, not FIFA26
-      ctx.font = `900 58px ${FONT}`;
+      ctx.font = `900 58px ${FONT_WC}`;
       ctx.fillText(typeOn("EVERY CHANCE. MAPPED.", (lt - 0.8) / 1.0), W / 2, 1000);
       ctx.fillStyle = MUTED;
-      ctx.font = `700 44px ${FONT}`;
+      ctx.font = `700 44px ${FONT_WC}`;
       ctx.fillText(typeOn("FULL SCOUT REPORT:", (lt - 1.6) / 0.6), W / 2, 1180);
       ctx.fillStyle = ACCENT2;
-      ctx.font = `900 70px ${FONT}`;
+      ctx.font = `900 70px ${FONT_WC}`;
       ctx.fillText(typeOn("CALCIOAC.COM", (lt - 2.0) / 0.6), W / 2, 1300);
       drawWcLogo(ctx, wcImg, W / 2, 1560, 280, 320, easeOut((lt - 2.4) / 0.8));
     }
