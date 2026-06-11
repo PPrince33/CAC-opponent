@@ -221,26 +221,31 @@ function drawShotMarker(ctx, ev, x, y, k, ex, ey) {
   const r = 16 * pop;
   ctx.save();
 
-  // Draw line from start to end location if available
-  if (ex != null && ey != null && pop > 0.3) {
-    const lineAlpha = clamp01((pop - 0.3) / 0.7);
+  // Draw line from start to end location
+  if (ex != null && ey != null && pop > 0.2) {
+    const lineAlpha = clamp01((pop - 0.2) / 0.5);
     ctx.save();
-    ctx.globalAlpha = lineAlpha * 0.7;
+    ctx.globalAlpha = lineAlpha * 0.85;
     ctx.strokeStyle = ev.shot_outcome === "goal" ? ACCENT
       : ev.shot_outcome === "target" ? WC_GREEN
       : WC_GRAY;
-    ctx.lineWidth = 3;
-    ctx.setLineDash([8, 6]);
+    ctx.lineWidth = 4;
+    ctx.setLineDash([10, 6]);
     ctx.beginPath();
     ctx.moveTo(x, y);
     ctx.lineTo(ex, ey);
     ctx.stroke();
     ctx.setLineDash([]);
-    // End dot
+    // End dot (arrowhead)
     ctx.globalAlpha = lineAlpha;
     ctx.fillStyle = ctx.strokeStyle;
     ctx.beginPath();
-    ctx.arc(ex, ey, 7 * pop, 0, Math.PI * 2);
+    ctx.arc(ex, ey, 10 * pop, 0, Math.PI * 2);
+    ctx.fill();
+    // Small white inner dot
+    ctx.fillStyle = "#fff";
+    ctx.beginPath();
+    ctx.arc(ex, ey, 4 * pop, 0, Math.PI * 2);
     ctx.fill();
     ctx.restore();
   }
@@ -589,9 +594,11 @@ export default function ReelPage() {
         shown++;
         if (ev.shot_outcome === "goal") goalsShown++;
         if (ev.shot_outcome === "goal" || ev.shot_outcome === "target") targetShown++;
+        // End coords: use actual if available, else estimate toward goal
+        const endY = ev.end_y != null ? ev.end_y : 40; // center of goal width
+        const endX = ev.end_x != null ? ev.end_x : 120; // goal line
         drawShotMarker(ctx, ev, toSX(ev.start_y), toSY(ev.start_x), k,
-          ev.end_y != null ? toSX(ev.end_y) : null,
-          ev.end_x != null ? toSY(ev.end_x) : null);
+          toSX(endY), toSY(endX));
       });
 
       // counters
@@ -637,9 +644,11 @@ export default function ReelPage() {
         shown++;
         if (ev.shot_outcome === "goal") goalsShown++;
         if (ev.shot_outcome === "goal" || ev.shot_outcome === "target") targetShown++;
+        // End coords: use actual if available, else estimate toward own goal
+        const endY = ev.end_y != null ? (80 - ev.end_y) : 40;
+        const endX = ev.end_x != null ? (120 - ev.end_x) : 120;
         drawShotMarker(ctx, ev, toSX(80 - ev.start_y), toSY(120 - ev.start_x), k,
-          ev.end_y != null ? toSX(80 - ev.end_y) : null,
-          ev.end_x != null ? toSY(120 - ev.end_x) : null);
+          toSX(endY), toSY(endX));
       });
 
       const cy = H - 220;
