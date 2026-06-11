@@ -215,11 +215,36 @@ function drawStar(ctx, x, y, r) {
   ctx.fill();
 }
 
-function drawShotMarker(ctx, ev, x, y, k) {
+function drawShotMarker(ctx, ev, x, y, k, ex, ey) {
   // k = pop progress 0..1
   const pop = easeOut(k);
   const r = 16 * pop;
   ctx.save();
+
+  // Draw line from start to end location if available
+  if (ex != null && ey != null && pop > 0.3) {
+    const lineAlpha = clamp01((pop - 0.3) / 0.7);
+    ctx.save();
+    ctx.globalAlpha = lineAlpha * 0.7;
+    ctx.strokeStyle = ev.shot_outcome === "goal" ? ACCENT
+      : ev.shot_outcome === "target" ? WC_GREEN
+      : WC_GRAY;
+    ctx.lineWidth = 3;
+    ctx.setLineDash([8, 6]);
+    ctx.beginPath();
+    ctx.moveTo(x, y);
+    ctx.lineTo(ex, ey);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    // End dot
+    ctx.globalAlpha = lineAlpha;
+    ctx.fillStyle = ctx.strokeStyle;
+    ctx.beginPath();
+    ctx.arc(ex, ey, 7 * pop, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  }
+
   if (ev.shot_outcome === "goal") {
     ctx.strokeStyle = ACCENT;
     ctx.lineWidth = 5;
@@ -564,7 +589,9 @@ export default function ReelPage() {
         shown++;
         if (ev.shot_outcome === "goal") goalsShown++;
         if (ev.shot_outcome === "goal" || ev.shot_outcome === "target") targetShown++;
-        drawShotMarker(ctx, ev, toSX(ev.start_y), toSY(ev.start_x), k);
+        drawShotMarker(ctx, ev, toSX(ev.start_y), toSY(ev.start_x), k,
+          ev.end_y != null ? toSX(ev.end_y) : null,
+          ev.end_x != null ? toSY(ev.end_x) : null);
       });
 
       // counters
@@ -610,7 +637,9 @@ export default function ReelPage() {
         shown++;
         if (ev.shot_outcome === "goal") goalsShown++;
         if (ev.shot_outcome === "goal" || ev.shot_outcome === "target") targetShown++;
-        drawShotMarker(ctx, ev, toSX(80 - ev.start_y), toSY(120 - ev.start_x), k);
+        drawShotMarker(ctx, ev, toSX(80 - ev.start_y), toSY(120 - ev.start_x), k,
+          ev.end_y != null ? toSX(80 - ev.end_y) : null,
+          ev.end_x != null ? toSY(120 - ev.end_x) : null);
       });
 
       const cy = H - 220;
